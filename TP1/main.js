@@ -1,6 +1,7 @@
 // fog example, filtrar oq precisa e refazer
 import * as THREE from 'three';
 import GUI from '../libs/util/dat.gui.module.js'
+import { createTree } from './arvore.js';
 import { FlyControls } from '../build/jsm/controls/FlyControls.js';
 import KeyboardState from '../libs/util/KeyboardState.js';
 import {
@@ -65,6 +66,10 @@ function showInformation() {
 
    controls.show();
 }
+
+let arvore = createTree();
+arvore.position.set(0, 0, -20);
+scene.add(arvore);
 
 function buildInterface() {
    var controls = new function () {
