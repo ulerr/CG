@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import GUI from '../libs/util/dat.gui.module.js'
 
 export function createTree() {
    let tree = new THREE.Group();

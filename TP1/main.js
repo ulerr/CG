@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import GUI from '../libs/util/dat.gui.module.js'
 import { createTree } from './arvore.js';
+import { createAirplane } from './aviao.js';
 import { FlyControls } from '../build/jsm/controls/FlyControls.js';
 import KeyboardState from '../libs/util/KeyboardState.js';
 import {
@@ -70,6 +71,10 @@ function showInformation() {
 let arvore = createTree();
 arvore.position.set(0, 0, -20);
 scene.add(arvore);
+
+let aviao = createAirplane();
+aviao.position.set(0, 5, -40);
+scene.add(aviao);
 
 function buildInterface() {
    var controls = new function () {
