@@ -1,25 +1,65 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
-export function createAirplane(){
-    let airplane = new THREE.Group();
-    const pi = Math.PI;
-    let CylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 3, 32);
-    let cylinderMaterial = new THREE.MeshBasicMaterial({color: 'Black'});
-    let cylinder = new THREE.Mesh(CylinderGeometry, cylinderMaterial);
-    cylinder.rotateX(pi/2);
-    airplane.add(cylinder);
+export function createAirplane() {
+  const airplane = new THREE.Group();
 
-    let ConeGeometry = new THREE.ConeGeometry(0.5, 0.1, 64, 1);
-    let coneMaterial = new THREE.MeshBasicMaterial({color: 'red'});
-    let cone = new THREE.Mesh(ConeGeometry, coneMaterial);
-    airplane.add(cone);
-    cone.rotateX(pi/2);
-    cone.translateY(1.55);
+  const material = new THREE.MeshStandardMaterial({ color: (128,0,0) });
 
-    let CubeGeometry = new THREE.BoxGeometry(0.15, 0.04);
-    let cubeMaterial = new THREE.MeshBasicMaterial({color : "white"});
-    let helice = new THREE.Mesh(CubeGeometry, cubeMaterial);
-    helice.translateY(0.01);
-    cone.add(helice);
-    return airplane;
+  // 1. Fuselagem (corpo)
+  const fuselage = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.5, 6, 32),
+    material,
+  );
+  fuselage.rotation.z = Math.PI / 2;
+  airplane.add(fuselage);
+
+  // 2. Nariz
+  const nose = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 0.5, 32),
+    material,
+  );
+  nose.position.x = 3.25;
+  nose.rotation.z = Math.PI / 2;
+  airplane.add(nose);
+
+  // 3. Cauda (traseira)
+  const tailCone = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 32), material);
+  tailCone.position.x = -3.5;
+  tailCone.rotation.z = Math.PI / 2;
+  airplane.add(tailCone);
+
+  // 4. Asa esquerda
+  const wingLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 2), material);
+  wingLeft.position.set(0, 0, -1);
+  airplane.add(wingLeft);
+
+  // 5. Asa direita
+  const wingRight = wingLeft.clone();
+  wingRight.position.z = 1;
+  airplane.add(wingRight);
+
+  // 6. Estabilizador horizontal
+  const tailWing = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 1), material);
+  tailWing.position.set(-4, 0, 0);
+  tailWing.rotation.y = Math.PI / 2;
+  airplane.add(tailWing);
+
+  // 7. Estabilizador vertical
+  const verticalTail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 1, 1),
+    material,
+  );
+  verticalTail.position.set(-4, 0.5, 0);
+  verticalTail.rotation.y = Math.PI / 2;
+  airplane.add(verticalTail);
+
+  // 8. Cabine
+  const cockpit = new THREE.Mesh(
+    new THREE.SphereGeometry(0.4, 32, 16),
+    new THREE.MeshStandardMaterial({ color: 0x3333ff }),
+  );
+  cockpit.position.set(1.5, 0.5, 0);
+  airplane.add(cockpit);
+
+  return airplane;
 }
