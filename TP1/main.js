@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import GUI from '../libs/util/dat.gui.module.js'
 import Stats from '../build/jsm/libs/stats.module.js';
-import { createTree } from './arvore.js';
+import { createTree1, createTree2 } from './arvore.js';
 import { createAirplane } from './aviao.js';
 import { FlyControls } from '../build/jsm/controls/FlyControls.js';
 import KeyboardState from '../libs/util/KeyboardState.js';
@@ -74,9 +74,13 @@ function showInformation() {
    controls.show();
 }
 
-let arvore = createTree();
-arvore.position.set(0, 0, -20);
-scene.add(arvore);
+let arvore1 = createTree1();
+arvore1.position.set(0, 0, -20);
+scene.add(arvore1);
+
+let arvore2 = createTree2();
+arvore2.position.set(0,0,-25);
+scene.add(arvore2);
 
 let aviao = createAirplane();
 aviao.position.set(0, 5, -40);
