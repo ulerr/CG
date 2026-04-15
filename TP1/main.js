@@ -35,16 +35,16 @@ container.appendChild(stats.dom);
 // Listen window size changes
 window.addEventListener('resize', function () { onWindowResize(camera, renderer) }, false);
 
-let groundPlane = createGroundPlaneWired(400, 400, 80, 80, 2, "dimgray", "gainsboro");
+let groundPlane = createGroundPlaneWired(400, 400, 80, 80, 2, "olivedrab", "gainsboro");
 scene.add(groundPlane);
 
 // para testes, remover posteriormente
 let flyCamera = new FlyControls(camera, renderer.domElement);
 flyCamera.movementSpeed = 10;
 flyCamera.domElement = renderer.domElement;
-flyCamera.rollSpeed = 0.20;
-flyCamera.autoForward = false;
-flyCamera.dragToLook = false;
+flyCamera.rollSpeed = 0;
+flyCamera.autoForward = true;
+flyCamera.dragToLook = true;
 
 let loadingMessage = new SecondaryBox("");
 showInformation();
