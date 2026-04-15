@@ -3,7 +3,8 @@ import * as THREE from "three";
 export function createAirplane() {
   const airplane = new THREE.Group();
 
-  const material = new THREE.MeshStandardMaterial({ color: (128,0,0) });
+  const material = new THREE.MeshStandardMaterial({ color: "darkgreen" });
+  const material2 = new THREE.MeshStandardMaterial({ color: "white" });
 
   // 1. Fuselagem (corpo)
   const fuselage = new THREE.Mesh(
@@ -29,7 +30,7 @@ export function createAirplane() {
   airplane.add(tailCone);
 
   // 4. Asa esquerda
-  const wingLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 2), material);
+  const wingLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 2), material2);
   wingLeft.position.set(0, 0, -1);
   airplane.add(wingLeft);
 
@@ -39,7 +40,7 @@ export function createAirplane() {
   airplane.add(wingRight);
 
   // 6. Estabilizador horizontal
-  const tailWing = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 1), material);
+  const tailWing = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 1), material2);
   tailWing.position.set(-4, 0, 0);
   tailWing.rotation.y = Math.PI / 2;
   airplane.add(tailWing);
@@ -47,7 +48,7 @@ export function createAirplane() {
   // 7. Estabilizador vertical
   const verticalTail = new THREE.Mesh(
     new THREE.BoxGeometry(0.2, 1, 1),
-    material,
+    material2,
   );
   verticalTail.position.set(-4, 0.5, 0);
   verticalTail.rotation.y = Math.PI / 2;
@@ -56,7 +57,7 @@ export function createAirplane() {
   // 8. Cabine
   const cockpit = new THREE.Mesh(
     new THREE.SphereGeometry(0.4, 32, 16),
-    new THREE.MeshStandardMaterial({ color: 0x3333ff }),
+    new THREE.MeshStandardMaterial({ color: "black" }),
   );
   cockpit.position.set(1.5, 0.5, 0);
   airplane.add(cockpit);
