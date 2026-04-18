@@ -4,7 +4,6 @@ import Stats from '../build/jsm/libs/stats.module.js';
 import { createTree1, createTree2 } from './arvore.js';
 import { createAirplane } from './aviao.js';
 import { createTarget } from './target.js';
-import { FlyControls } from '../build/jsm/controls/FlyControls.js';
 import KeyboardState from '../libs/util/KeyboardState.js';
 import {
    initRenderer,
@@ -35,16 +34,9 @@ scene.add(groundPlane);
 // camera, adicionar modo livre
 let camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 let isFlyOn = true;
-camera.position.set(0.0, 15.0, 0.0);
+camera.position.set(0, 18.0, 10.0);
+camera.lookAt(0, 18, -40);
 camera.up.set(0, 1, 0);
-
-let flyCamera = new FlyControls(camera, renderer.domElement);
-flyCamera.movementSpeed = 10;
-flyCamera.domElement = renderer.domElement;
-flyCamera.rollSpeed = 0;
-flyCamera.autoForward = true;
-flyCamera.dragToLook = true;
-
 
 // fps container
 const container = document.getElementById('fps-container');
@@ -59,25 +51,33 @@ buildInterface();
 
 window.addEventListener('mousemove', onMouseMove);
 
-const raycaster = new THREE.Raycaster();
-
 // geracao de arvores, fazer geracao automatica
 
 let aviao = createAirplane();
-aviao.position.set(0, 5, -40);
+aviao.position.set(0, 10, -40);
+camera.add(aviao);
 scene.add(aviao);
 
-let target = createTarget();
-target.position.set(0, 5, -50);
-let targetPlane = new THREE.Plane((0,-1,0),0);
-scene.add(target);
+let alvo = createTarget();
+alvo.position.set(0, 5, -50);
+scene.add(alvo);
 
-// Variables that will be used for linear interpolation
+const planoAlvoNormal = new THREE.Vector3(0, 0, 1);
+const planoAlvo = new THREE.Plane(planoAlvoNormal, 50); // O "50" coloca o plano em Z = -50
+const pontoIntersecao = new THREE.Vector3(); // Variável auxiliar para guardar o resultado
+
+const raycaster = new THREE.Raycaster();
 var posMouse = new THREE.Vector2();
 var intersecaoMouse = new THREE.Vector3();
-const lerpConfig = {
-  destination: new THREE.Vector3(-20.0, -30.0, -10.0),
-  alpha: 0.01,
+
+const alvoLerpConfig = {
+  destination: new THREE.Vector3(),
+  alpha: 0.1,
+  move: true
+}
+const planeLerpConfig = {
+  destination: new THREE.Vector3(),
+  alpha: 0.05,
   move: true
 }
 
@@ -88,23 +88,8 @@ render();
 
 //-- FUNCTIONS ---------------------------------------------------
 function showInformation(controls) {
-   controls.add("Fly Controls Example");
+   controls.add("Trabalho 1");
    controls.addParagraph();
-   controls.add("Keyboard:");
-   controls.add("* WASD - Move");
-   controls.add("* R | F - up | down");
-   controls.add("* Q | E - roll");
-   controls.add("* F - toggle show/hide information");
-   controls.add("* Enter - start/stop fly control");
-   controls.addParagraph();
-   controls.add("Mouse and Keyboard arrows:");
-   controls.add("* up | down    - pitch");
-   controls.add("* left | right - yaw");
-   controls.addParagraph();
-   controls.add("Mouse buttons:");
-   controls.add("* Left  - Move forward");
-   controls.add("* Right - Move backward");
-
    controls.show();
 }
 
@@ -121,12 +106,23 @@ function onMouseMove(event) {
 
 function checkIntersections() {
   raycaster.setFromCamera(posMouse, camera);
-  const intersects = raycaster.intersectObjects(scene.children, true);
-  if (intersects.length > 0) {
-    
+	planoAlvo.constant = -alvo.position.z;
+  raycaster.ray.intersectPlane(planoAlvo, pontoIntersecao);
+  if (pontoIntersecao) {
+    alvo.position.x = THREE.MathUtils.lerp(alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
+		alvo.position.y = THREE.MathUtils.lerp(alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
+    aviao.position.x  = THREE.MathUtils.lerp(aviao.position.x, pontoIntersecao.x, planeLerpConfig.alpha);
+    aviao.position.y  = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y, planeLerpConfig.alpha);
   }
 }
-
+/*
+const v0 = new THREE.Vector3()
+const q = new THREE.Quaternion()
+const angularVelocity = new THREE.Vector3()
+q.setFromAxisAngle(angularVelocity, delta).normalize()
+sphere.applyQuaternion(q)
+angularVelocity.lerp(v0, 0.01)
+*/
 function spawnTrees(){
       for (let i = 0; i<200; i++){
          const tree = Math.random() > 0.5
@@ -177,12 +173,15 @@ function keyboardUpdate() {
 }
 
 function render() {
-   const delta = clock.getDelta();
-   stats.update();
-   keyboardUpdate();
-   if (isFlyOn) flyCamera.update(delta);
-	 checkIntersections();
-   // if(intersecaoMouse != null) aviao.position.lerp(intersecaoMouse, lerpConfig.alpha);
-   requestAnimationFrame(render);
-   renderer.render(scene, camera)
+  const delta = clock.getDelta();
+  stats.update();
+  keyboardUpdate();
+  if (isFlyOn) {
+		camera.translateZ(delta * -12);
+		aviao.translateZ(delta * -12);
+		alvo.translateZ(delta * -12);
+	}
+	checkIntersections();
+  requestAnimationFrame(render);
+  renderer.render(scene, camera)
 }
