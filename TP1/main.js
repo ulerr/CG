@@ -112,7 +112,7 @@ function checkIntersections() {
     alvo.position.x = THREE.MathUtils.lerp(alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
 		alvo.position.y = THREE.MathUtils.lerp(alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
     aviao.position.x  = THREE.MathUtils.lerp(aviao.position.x, pontoIntersecao.x, planeLerpConfig.alpha);
-    aviao.position.y  = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y, planeLerpConfig.alpha);
+    aviao.position.y  = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y - 5, planeLerpConfig.alpha);
   }
 }
 /*
