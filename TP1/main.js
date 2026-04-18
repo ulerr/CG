@@ -62,13 +62,6 @@ window.addEventListener('mousemove', onMouseMove);
 const raycaster = new THREE.Raycaster();
 
 // geracao de arvores, fazer geracao automatica
-let arvore1 = createTree1();
-arvore1.position.set(0, 0, -20);
-scene.add(arvore1);
-
-let arvore2 = createTree2();
-arvore2.position.set(0,0,-25);
-scene.add(arvore2);
 
 let aviao = createAirplane();
 aviao.position.set(0, 5, -40);
@@ -88,6 +81,9 @@ const lerpConfig = {
   move: true
 }
 
+const arvore1 = createTree1();
+const arvore2 = createTree2();
+spawnTrees();
 render();
 
 //-- FUNCTIONS ---------------------------------------------------
@@ -130,6 +126,23 @@ function checkIntersections() {
     
   }
 }
+
+function spawnTrees(){
+      for (let i = 0; i<200; i++){
+         const tree = Math.random() > 0.5
+         ? arvore1.clone()
+         : arvore2.clone();
+
+         const x = (Math.random() - 0.5) * 100;
+         const z = (Math.random() - 0.5) * 200;
+
+         tree.position.set(x, 0.25, z);
+
+         const scale = 0.5 + Math.random() * 1.5;
+         tree.scale.set(scale,scale, scale);
+         scene.add(tree);
+      }
+ }
 
 function buildInterface() {
    var controls = new function () {
