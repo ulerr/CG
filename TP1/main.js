@@ -35,7 +35,7 @@ scene.add(groundPlane);
 // camera, adicionar modo livre
 let camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 let isFlyOn = true;
-camera.position.set(10.0, 15.0, 0.0);
+camera.position.set(0.0, 15.0, 0.0);
 camera.up.set(0, 1, 0);
 
 let flyCamera = new FlyControls(camera, renderer.domElement);
