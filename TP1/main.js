@@ -34,7 +34,7 @@ scene.add(groundPlane);
 // camera, adicionar modo livre
 let camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 let isFlyOn = true;
-camera.position.set(0, 18.0, 10.0);
+camera.position.set(0, 18.0, -10.0);
 camera.lookAt(0, 18, -40);
 camera.up.set(0, 1, 0);
 
@@ -54,7 +54,7 @@ window.addEventListener('mousemove', onMouseMove);
 // geracao de arvores, fazer geracao automatica
 
 let aviao = createAirplane();
-aviao.position.set(0, 10, -40);
+aviao.position.set(0, 10, -50);
 camera.add(aviao);
 scene.add(aviao);
 
