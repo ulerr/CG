@@ -1,15 +1,16 @@
 import * as THREE from "three";
-
+import { setDefaultMaterial } from "../libs/util/util.js";
 export function createAirplane() {
   const airplane = new THREE.Group();
 
-  const material = new THREE.MeshStandardMaterial({ color: "darkgreen" });
-  const material2 = new THREE.MeshStandardMaterial({ color: "white" });
+  const material1 = setDefaultMaterial("navy");
+  const material2 = setDefaultMaterial("white");
+  const material3 = setDefaultMaterial("black");
 
   // 1. Fuselagem (corpo)
   const fuselage = new THREE.Mesh(
     new THREE.CylinderGeometry(0.5, 0.5, 6, 32),
-    material,
+    material1,
   );
   fuselage.rotation.z = Math.PI / 2;
   airplane.add(fuselage);
@@ -17,14 +18,14 @@ export function createAirplane() {
   // 2. Nariz
   const nose = new THREE.Mesh(
     new THREE.CylinderGeometry(0.1, 0.1, 0.5, 32),
-    material,
+    material2,
   );
   nose.position.x = 3.25;
   nose.rotation.z = Math.PI / 2;
   airplane.add(nose);
 
   // 3. Cauda (traseira)
-  const tailCone = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 32), material);
+  const tailCone = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 32), material1);
   tailCone.position.x = -3.5;
   tailCone.rotation.z = Math.PI / 2;
   airplane.add(tailCone);

@@ -29,8 +29,8 @@ initDefaultBasicLight(scene, true); // iluminacao basica
 const camera = new THREE.PerspectiveCamera(
 	30, window.innerWidth / window.innerHeight, 0.1, 1000);
 let isFlyOn = true;
-camera.position.set(0, 18.0, -10.0);
-camera.lookAt(0, 18, -40);
+camera.position.set(0, 20.0, -10.0);
+camera.lookAt(0, 20, -40);
 camera.up.set(0, 1, 0);
 
 // fps container
@@ -82,7 +82,10 @@ const aviaoLerpConfig = {
 };
 
 let currentChunk = createChunk(0);
+let lastChunkZ = 0;
 scene.add(currentChunk);
+let chunks = [];
+initChunks();
 render();
 
 //-- FUNCTIONS ---------------------------------------------------
@@ -109,8 +112,17 @@ function createChunk(zPosition) {
   groundPlane.position.z = zPosition;
 
   chunk.add(groundPlane);
-  spawnTrees(chunk, 300, zPosition);
+  spawnTrees(chunk, 100, zPosition);
   return chunk;
+}
+
+function initChunks() {
+  for (let i = 0; i < 3; i++) { // Renderiza 3 blocos iniciais
+    const chunk = createChunk(-i * 200); // Cria no Z: 0, -200, e -400
+    chunks.push(chunk);
+    scene.add(chunk);
+  }
+  lastChunkZ = -400; // Agora o valor bate com o último chunk do loop
 }
 
 function onMouseMove(event) {
@@ -131,7 +143,7 @@ function intersecoesLERPeSLERP() {
     aviao.position.x = THREE.MathUtils.lerp(
       aviao.position.x, pontoIntersecao.x, aviaoLerpConfig.alpha);
     aviao.position.y = THREE.MathUtils.lerp(
-			aviao.position.y, pontoIntersecao.y - 5, aviaoLerpConfig.alpha);
+			aviao.position.y, pontoIntersecao.y - 3, aviaoLerpConfig.alpha);
 
     const dX = pontoIntersecao.x - aviao.position.x;
 
@@ -181,7 +193,7 @@ function spawnTrees(chunk, amount, zBase) {
     tree.position.set(x, 0, z);
 
     // escala aleatória
-    const scale = 0.5 + Math.random() * 1.5;
+    const scale = 0.5 + Math.random() * 0.8;
     tree.scale.set(scale, scale, scale);
 
     chunk.add(tree);
@@ -214,6 +226,8 @@ function keyboardUpdate() {
   }
 }
 
+
+
 function render() {
   const delta = clock.getDelta();
   stats.update();
@@ -230,11 +244,19 @@ function render() {
 	aviao.getWorldPosition(aviaoPosition);
 	const chunkPosition = new THREE.Vector3();
 	currentChunk.getWorldPosition(chunkPosition);
-  if (aviaoPosition.z < chunkPosition.z - 200) {
-    scene.remove(currentChunk);
-    currentChunk = createChunk(aviaoPosition.z - 300);
-    scene.add(currentChunk);
-  }
+ if (aviao.position.z < lastChunkZ + 200) {
+  const newZ = lastChunkZ - 200;
+  const newChunk = createChunk(newZ);
+
+  scene.add(newChunk);
+  chunks.push(newChunk);
+
+  // remove o mais antigo
+  const oldChunk = chunks.shift();
+  scene.remove(oldChunk);
+
+  lastChunkZ = newZ;
+}
 
   requestAnimationFrame(render);
   renderer.render(scene, camera);
