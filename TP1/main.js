@@ -25,22 +25,9 @@ scene.fog = new THREE.Fog(baseColor, 1, 100);
 
 initDefaultBasicLight(scene, true); // iluminacao basica
 
-// Listen window size changes
-window.addEventListener(
-  "resize",
-  function () {
-    onWindowResize(camera, renderer);
-  },
-  false,
-);
-
 // camera, adicionar modo livre
-let camera = new THREE.PerspectiveCamera(
-  45,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(
+	30, window.innerWidth / window.innerHeight, 0.1, 1000);
 let isFlyOn = true;
 camera.position.set(0, 18.0, -10.0);
 camera.lookAt(0, 18, -40);
@@ -51,28 +38,32 @@ const container = document.getElementById("fps-container");
 const stats = new Stats();
 container.appendChild(stats.dom);
 
+// informacoes, canto inf direito
 let loadingMessage = new SecondaryBox("");
 var controls = new InfoBox();
 var showInfo = true;
 showInformation(controls);
 buildInterface();
 
-window.addEventListener("mousemove", onMouseMove);
+const maxRoll = Math.PI / 3;
+const rotacaoBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+const rotacaoAlvo = new THREE.Quaternion();
 
-// geracao de arvores, fazer geracao automatica
-
-let aviao = createAirplane();
+const aviao = createAirplane();
 aviao.position.set(0, 10, -50);
-camera.add(aviao);
-scene.add(aviao);
+aviao.quaternion.copy(rotacaoBase); // Força o avião a começar olhando para frente
+scene.add(aviao); 
 
-let alvo = createTarget();
+const alvo = createTarget();
 alvo.position.set(0, 5, -50);
 scene.add(alvo);
 
+window.addEventListener("resize", function() {onWindowResize(camera, renderer)}, false);
+window.addEventListener("mousemove", onMouseMove);
+
 const planoAlvoNormal = new THREE.Vector3(0, 0, 1);
-const planoAlvo = new THREE.Plane(planoAlvoNormal, 50); // O "50" coloca o plano em Z = -50
-const pontoIntersecao = new THREE.Vector3(); // Variável auxiliar para guardar o resultado
+const planoAlvo = new THREE.Plane(planoAlvoNormal, 50);
+const pontoIntersecao = new THREE.Vector3();
 
 const raycaster = new THREE.Raycaster();
 var posMouse = new THREE.Vector2();
@@ -80,12 +71,13 @@ var intersecaoMouse = new THREE.Vector3();
 
 const alvoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.1,
+  alpha: 0.3,
   move: true,
 };
-const planeLerpConfig = {
+
+const aviaoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.05,
+  alpha: 0.1,
   move: true,
 };
 
@@ -121,56 +113,40 @@ function createChunk(zPosition) {
   return chunk;
 }
 
-function hideInformation(controls) {
-  if (
-    controls &&
-    controls.domElement &&
-    document.body.contains(controls.domElement)
-  ) {
-    document.body.removeChild(controls.domElement);
-  }
-}
-
 function onMouseMove(event) {
   posMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   posMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 }
 
-function checkIntersections() {
+function intersecoesLERPeSLERP() {
   raycaster.setFromCamera(posMouse, camera);
   planoAlvo.constant = -alvo.position.z;
   raycaster.ray.intersectPlane(planoAlvo, pontoIntersecao);
-  if (pontoIntersecao) {
+
+  if (pontoIntersecao && aviaoLerpConfig.move && alvoLerpConfig.move) {
     alvo.position.x = THREE.MathUtils.lerp(
-      alvo.position.x,
-      pontoIntersecao.x,
-      alvoLerpConfig.alpha,
-    );
+      alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
     alvo.position.y = THREE.MathUtils.lerp(
-      alvo.position.y,
-      pontoIntersecao.y,
-      alvoLerpConfig.alpha,
-    );
+      alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
     aviao.position.x = THREE.MathUtils.lerp(
-      aviao.position.x,
-      pontoIntersecao.x,
-      planeLerpConfig.alpha,
-    );
+      aviao.position.x, pontoIntersecao.x, aviaoLerpConfig.alpha);
     aviao.position.y = THREE.MathUtils.lerp(
-      aviao.position.y,
-      pontoIntersecao.y - 5,
-      planeLerpConfig.alpha,
-    );
+			aviao.position.y, pontoIntersecao.y - 5, aviaoLerpConfig.alpha);
+
+    const dX = pontoIntersecao.x - aviao.position.x;
+
+    let anguloRoll = dX * 0.15; 
+    anguloRoll = THREE.MathUtils.clamp(anguloRoll, -maxRoll, maxRoll);
+    const quatRoll =
+			new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), anguloRoll);
+
+    // Combina a rotação base (aviao modelado em outro eixo) com a rolagem
+    rotacaoAlvo.copy(rotacaoBase).multiply(quatRoll);
+
+    aviao.quaternion.slerp(rotacaoAlvo, aviaoLerpConfig.alpha * 2);
   }
 }
-/*
-const v0 = new THREE.Vector3()
-const q = new THREE.Quaternion()
-const angularVelocity = new THREE.Vector3()
-q.setFromAxisAngle(angularVelocity, delta).normalize()
-sphere.applyQuaternion(q)
-angularVelocity.lerp(v0, 0.01)
-*/
+
 function spawnTrees(chunk, amount, zBase) {
   const trees = [];
   const minDistance = 5; // distância mínima entre árvores
@@ -236,31 +212,27 @@ function keyboardUpdate() {
       ? loadingMessage.changeMessage("Fly On")
       : loadingMessage.changeMessage("Fly Off");
   }
-  if (keyboard.down("f")) {
-    if (showInfo) {
-      hideInformation(controls);
-      showInfo = false;
-    } else {
-      showInformation(controls);
-      showInfo = true;
-    }
-  }
 }
 
 function render() {
   const delta = clock.getDelta();
   stats.update();
   keyboardUpdate();
+
   if (isFlyOn) {
     camera.translateZ(delta * -12);
-    aviao.translateZ(delta * -12);
+    aviao.translateX(delta * 12);
     alvo.translateZ(delta * -12);
+		intersecoesLERPeSLERP();
   }
-  checkIntersections();
 
-  if (aviao.position.z < currentChunk.position.z - 100) {
+	const aviaoPosition = new THREE.Vector3();
+	aviao.getWorldPosition(aviaoPosition);
+	const chunkPosition = new THREE.Vector3();
+	currentChunk.getWorldPosition(chunkPosition);
+  if (aviaoPosition.z < chunkPosition.z - 200) {
     scene.remove(currentChunk);
-    currentChunk = createChunk(aviao.position.z - 200);
+    currentChunk = createChunk(aviaoPosition.z - 300);
     scene.add(currentChunk);
   }
 

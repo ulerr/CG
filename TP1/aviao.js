@@ -61,6 +61,6 @@ export function createAirplane() {
   );
   cockpit.position.set(1.5, 0.5, 0);
   airplane.add(cockpit);
-  airplane.rotation.y = Math.PI / 2;
+  // airplane.rotation.y = Math.PI / 2;
   return airplane;
 }
