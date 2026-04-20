@@ -125,7 +125,8 @@ function createChunk(zPosition) {
   groundPlane.position.z = zPosition;
 
   chunk.add(groundPlane);
-  spawnTrees(chunk, 150, zPosition);
+  let trees = (Math.random() * 100 + 100 + 1) | 0;
+  spawnTrees(chunk, trees, zPosition);
   return chunk;
 }
 
