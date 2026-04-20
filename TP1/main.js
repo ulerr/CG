@@ -21,16 +21,16 @@ let keyboard = new KeyboardState();
 let renderer = initRenderer(); // View function in util/utils
 renderer.setClearColor(baseColor);
 let scene = new THREE.Scene();
-scene.fog = new THREE.Fog(baseColor, 1, 100);
+scene.fog = new THREE.Fog(baseColor, 1, 250);
 
 initDefaultBasicLight(scene, true); // iluminacao basica
 
 // camera, adicionar modo livre
 const camera = new THREE.PerspectiveCamera(
-	30, window.innerWidth / window.innerHeight, 0.1, 1000);
+	30, window.innerWidth / window.innerHeight, 0.1, 600);
 let isFlyOn = true;
 camera.position.set(0, 20.0, -10.0);
-camera.lookAt(0, 20, -40);
+camera.lookAt(0, 20, -10);
 camera.up.set(0, 1, 0);
 
 // fps container
@@ -45,12 +45,24 @@ var showInfo = true;
 showInformation(controls);
 buildInterface();
 
-const maxRoll = Math.PI / 3;
-const rotacaoBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
-const rotacaoAlvo = new THREE.Quaternion();
+// eixo longitudinal da fuselagem = X local => rolagem no X
+// eixo lateral (asas) = Z local => guinagem no Z
+// eixo vertical = Y local => arfagem no Y
+// isso significa que apesar da cena prosseguir no Z global
+// o aviao se translada em seu X local
 
 const aviao = createAirplane();
 aviao.position.set(0, 10, -50);
+const maxRoll = Math.PI / 3;
+const maxPitch = Math.PI / 4;
+const eixoRoll = new THREE.Vector3(1, 0, 0);
+const eixoPitch = new THREE.Vector3(0, 0, 1);
+const quatRoll = new THREE.Quaternion();
+const quatPitch = new THREE.Quaternion();
+const rotacaoBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+const rotacaoAlvo = new THREE.Quaternion();
+const aviaoPosition = new THREE.Vector3();
+
 aviao.quaternion.copy(rotacaoBase); // Força o avião a começar olhando para frente
 scene.add(aviao); 
 
@@ -61,6 +73,7 @@ scene.add(alvo);
 window.addEventListener("resize", function() {onWindowResize(camera, renderer)}, false);
 window.addEventListener("mousemove", onMouseMove);
 
+// sincronização alvo e mouse
 const planoAlvoNormal = new THREE.Vector3(0, 0, 1);
 const planoAlvo = new THREE.Plane(planoAlvoNormal, 50);
 const pontoIntersecao = new THREE.Vector3();
@@ -71,16 +84,16 @@ var intersecaoMouse = new THREE.Vector3();
 
 const alvoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.3,
+  alpha: 0.04,
   move: true,
 };
-
 const aviaoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.1,
+  alpha: 0.04,
   move: true,
 };
 
+const chunkPosition = new THREE.Vector3();
 let currentChunk = createChunk(0);
 let lastChunkZ = 0;
 scene.add(currentChunk);
@@ -112,7 +125,7 @@ function createChunk(zPosition) {
   groundPlane.position.z = zPosition;
 
   chunk.add(groundPlane);
-  spawnTrees(chunk, 100, zPosition);
+  spawnTrees(chunk, 150, zPosition);
   return chunk;
 }
 
@@ -125,11 +138,14 @@ function initChunks() {
   lastChunkZ = -400; // Agora o valor bate com o último chunk do loop
 }
 
+// atualiza movimento do mouse por event
 function onMouseMove(event) {
   posMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   posMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 }
 
+// inicialmente era pra tratar somente intersecao do mouse por raycast
+// mas convinientemente acabou sendo um bom lugar para fazer lerp e slerp
 function intersecoesLERPeSLERP() {
   raycaster.setFromCamera(posMouse, camera);
   planoAlvo.constant = -alvo.position.z;
@@ -146,14 +162,16 @@ function intersecoesLERPeSLERP() {
 			aviao.position.y, pontoIntersecao.y - 3, aviaoLerpConfig.alpha);
 
     const dX = pontoIntersecao.x - aviao.position.x;
+    let anguloRoll = THREE.MathUtils.clamp(dX * 0.15, -maxRoll, maxRoll);
+    quatRoll.setFromAxisAngle(eixoRoll, anguloRoll);
+		
+		const dY = pontoIntersecao.y - (aviao.position.y + 3);
+    let anguloPitch = THREE.MathUtils.clamp(dY * 0.05, -maxPitch, maxPitch);
+    quatPitch.setFromAxisAngle(eixoPitch, anguloPitch);
 
-    let anguloRoll = dX * 0.15; 
-    anguloRoll = THREE.MathUtils.clamp(anguloRoll, -maxRoll, maxRoll);
-    const quatRoll =
-			new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), anguloRoll);
-
-    // Combina a rotação base (aviao modelado em outro eixo) com a rolagem
-    rotacaoAlvo.copy(rotacaoBase).multiply(quatRoll);
+    // Combina a rotação base (aviao modelado em outro eixo) com a rolagem e guinagem
+		// ordem importa
+    rotacaoAlvo.copy(rotacaoBase).multiply(quatPitch).multiply(quatRoll);
 
     aviao.quaternion.slerp(rotacaoAlvo, aviaoLerpConfig.alpha * 2);
   }
@@ -170,8 +188,8 @@ function spawnTrees(chunk, amount, zBase) {
     while (!validPosition) {
       validPosition = true;
 
-      x = (Math.random() - 0.5) * 100;
-      z = zBase + (Math.random() - 0.5) * 200;
+      x = (Math.random() - 0.5) * 200;
+      z = zBase + (Math.random() - 0.5) * 400;
 
       // Verifica distância com árvores existentes
       for (let j = 0; j < trees.length; j++) {
@@ -226,8 +244,6 @@ function keyboardUpdate() {
   }
 }
 
-
-
 function render() {
   const delta = clock.getDelta();
   stats.update();
@@ -240,23 +256,18 @@ function render() {
 		intersecoesLERPeSLERP();
   }
 
-	const aviaoPosition = new THREE.Vector3();
 	aviao.getWorldPosition(aviaoPosition);
-	const chunkPosition = new THREE.Vector3();
 	currentChunk.getWorldPosition(chunkPosition);
- if (aviao.position.z < lastChunkZ + 200) {
-  const newZ = lastChunkZ - 200;
-  const newChunk = createChunk(newZ);
 
-  scene.add(newChunk);
-  chunks.push(newChunk);
-
-  // remove o mais antigo
-  const oldChunk = chunks.shift();
-  scene.remove(oldChunk);
-
-  lastChunkZ = newZ;
-}
+	if (aviao.position.z < lastChunkZ + 200) {
+  	const newZ = lastChunkZ - 200;
+  	const newChunk = createChunk(newZ);
+  	scene.add(newChunk);
+  	chunks.push(newChunk);
+  	const oldChunk = chunks.shift();
+  	scene.remove(oldChunk);
+  	lastChunkZ = newZ;
+	}
 
   requestAnimationFrame(render);
   renderer.render(scene, camera);
