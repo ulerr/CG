@@ -58,7 +58,7 @@ export function createAirplane() {
   // 8. Cabine
   const cockpit = new THREE.Mesh(
     new THREE.SphereGeometry(0.4, 32, 16),
-    new THREE.MeshStandardMaterial({ color: "black" }),
+    material3
   );
   cockpit.position.set(1.5, 0.5, 0);
   airplane.add(cockpit);
