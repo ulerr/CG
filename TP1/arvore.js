@@ -1,9 +1,8 @@
 import * as THREE from 'three';
-import { setDefaultMaterial } from "../libs/util/util.js";
 
 let trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 3, 32);
-let trunkMaterial = setDefaultMaterial("sienna");   
-let foliageMaterial = setDefaultMaterial("forestgreen");
+let trunkMaterial = new THREE.MeshPhongMaterial({ color: "sienna" });
+let foliageMaterial = new THREE.MeshPhongMaterial({ color: "forestgreen" });
 let foliageGeometry1 = new THREE.ConeGeometry(2, 4, 32);
 let foliageGeometry2 = new THREE.ConeGeometry(1.5, 3, 32);
 let foliageGeometry3 = new THREE.ConeGeometry(1, 2, 32);

@@ -1,11 +1,11 @@
 import * as THREE from "three";
-import { setDefaultMaterial } from "../libs/util/util.js";
+
 export function createAirplane() {
   const airplane = new THREE.Group();
 
-  const material1 = setDefaultMaterial("navy");
-  const material2 = setDefaultMaterial("white");
-  const material3 = setDefaultMaterial("black");
+  const material1 = new THREE.MeshPhongMaterial({ color: "navy" });
+  const material2 = new THREE.MeshPhongMaterial({ color: "white" });
+  const material3 = new THREE.MeshPhongMaterial({ color: "black" });
 
   // 1. Fuselagem (corpo)
   const fuselage = new THREE.Mesh(
