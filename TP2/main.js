@@ -273,6 +273,7 @@ function keyboardUpdate() {
         case 3: loadingMessage.changeMessage("Velocidade 3");
         break;
       }
+      document.body.style.cursor = 'none';
       scene.add(alvo);
     } else {
       loadingMessage.changeMessage("Pause");
