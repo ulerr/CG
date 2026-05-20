@@ -26,7 +26,7 @@ let scene = new THREE.Scene();
 scene.fog = new THREE.Fog(baseColor, 1, 250);
 
 initDefaultBasicLight(scene, true); // iluminacao basica
-
+document.body.style.cursor = 'none';
 // camera, adicionar modo livre
 const camera = new THREE.PerspectiveCamera(
   30,
@@ -276,6 +276,7 @@ function keyboardUpdate() {
       scene.add(alvo);
     } else {
       loadingMessage.changeMessage("Pause");
+      document.body.style.cursor = 'default';
       scene.remove(alvo);
     }
   }
