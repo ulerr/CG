@@ -14,6 +14,7 @@ import {
   InfoBox,
   createGroundPlaneWired,
 } from "../libs/util/util.js";
+import { KeyframeTrack } from "../build/three.core.js";
 
 // boilerplate code
 let clock = new THREE.Clock();
@@ -28,7 +29,11 @@ initDefaultBasicLight(scene, true); // iluminacao basica
 
 // camera, adicionar modo livre
 const camera = new THREE.PerspectiveCamera(
-	30, window.innerWidth / window.innerHeight, 0.1, 600);
+  30,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  600,
+);
 let isFlyOn = true;
 camera.position.set(0, 20.0, -10.0);
 camera.lookAt(0, 20, -10);
@@ -40,7 +45,7 @@ const stats = new Stats();
 container.appendChild(stats.dom);
 
 // informacoes, canto inf direito
-let loadingMessage = new SecondaryBox("");
+let loadingMessage = new SecondaryBox("Velocidade 1");
 var controls = new InfoBox();
 var showInfo = true;
 showInformation(controls);
@@ -60,18 +65,26 @@ const eixoRoll = new THREE.Vector3(1, 0, 0);
 const eixoPitch = new THREE.Vector3(0, 0, 1);
 const quatRoll = new THREE.Quaternion();
 const quatPitch = new THREE.Quaternion();
-const rotacaoBase = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
+const rotacaoBase = new THREE.Quaternion().setFromEuler(
+  new THREE.Euler(0, Math.PI / 2, 0),
+);
 const rotacaoAlvo = new THREE.Quaternion();
 const aviaoPosition = new THREE.Vector3();
 
 aviao.quaternion.copy(rotacaoBase); // Força o avião a começar olhando para frente
-scene.add(aviao); 
+scene.add(aviao);
 
 const alvo = createTarget();
 alvo.position.set(0, 5, -50);
 scene.add(alvo);
 
-window.addEventListener("resize", function() {onWindowResize(camera, renderer)}, false);
+window.addEventListener(
+  "resize",
+  function () {
+    onWindowResize(camera, renderer);
+  },
+  false,
+);
 window.addEventListener("mousemove", onMouseMove);
 
 // sincronização alvo e mouse
@@ -93,7 +106,8 @@ const aviaoLerpConfig = {
   alpha: 0.04,
   move: true,
 };
-
+let vel = 1;
+let fator = -60;
 const chunkPosition = new THREE.Vector3();
 let lastBorderRow = null;
 let currentChunk = createChunk(0);
@@ -109,7 +123,6 @@ function showInformation(controls) {
   controls.addParagraph();
   controls.show();
 }
-
 
 function createChunk(zPosition) {
   const chunk = new THREE.Group();
@@ -131,7 +144,7 @@ function initChunks() {
     const chunk = createChunk(-i * 200);
     chunks.push(chunk);
   }
-  lastChunkZ = -400;
+  lastChunkZ = -200;
 }
 
 // atualiza movimento do mouse por event
@@ -149,24 +162,36 @@ function intersecoesLERPeSLERP() {
 
   if (pontoIntersecao && aviaoLerpConfig.move && alvoLerpConfig.move) {
     alvo.position.x = THREE.MathUtils.lerp(
-      alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
+      alvo.position.x,
+      pontoIntersecao.x,
+      alvoLerpConfig.alpha,
+    );
     alvo.position.y = THREE.MathUtils.lerp(
-      alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
+      alvo.position.y,
+      pontoIntersecao.y,
+      alvoLerpConfig.alpha,
+    );
     aviao.position.x = THREE.MathUtils.lerp(
-      aviao.position.x, pontoIntersecao.x, aviaoLerpConfig.alpha);
+      aviao.position.x,
+      pontoIntersecao.x,
+      aviaoLerpConfig.alpha,
+    );
     aviao.position.y = THREE.MathUtils.lerp(
-			aviao.position.y, pontoIntersecao.y - 3, aviaoLerpConfig.alpha);
+      aviao.position.y,
+      pontoIntersecao.y - 3,
+      aviaoLerpConfig.alpha,
+    );
 
     const dX = pontoIntersecao.x - aviao.position.x;
     let anguloRoll = THREE.MathUtils.clamp(dX * 0.15, -maxRoll, maxRoll);
     quatRoll.setFromAxisAngle(eixoRoll, anguloRoll);
-		
-		const dY = pontoIntersecao.y - (aviao.position.y + 3);
+
+    const dY = pontoIntersecao.y - (aviao.position.y + 3);
     let anguloPitch = THREE.MathUtils.clamp(dY * 0.05, -maxPitch, maxPitch);
     quatPitch.setFromAxisAngle(eixoPitch, anguloPitch);
 
     // Combina a rotação base (aviao modelado em outro eixo) com a rolagem e guinagem
-		// ordem importa
+    // ordem importa
     rotacaoAlvo.copy(rotacaoBase).multiply(quatPitch).multiply(quatRoll);
 
     aviao.quaternion.slerp(rotacaoAlvo, aviaoLerpConfig.alpha * 2);
@@ -207,7 +232,7 @@ function spawnTrees(chunk, amount, zBase) {
     // Escolhe tipo de árvore
     const tree =
       Math.random() > 0.5 ? createTree1().clone() : createTree2().clone();
-    
+
     const y = getTerrainHeight(x, z);
     tree.position.set(x, y, z);
 
@@ -239,36 +264,63 @@ function keyboardUpdate() {
   keyboard.update();
   if (keyboard.down("esc")) {
     isFlyOn = !isFlyOn;
-    isFlyOn
-      ? loadingMessage.changeMessage("")
-      : loadingMessage.changeMessage("Pause");
+    if (isFlyOn) {
+      switch(vel){
+        case 1: loadingMessage.changeMessage("Velocidade 1");
+        break;
+        case 2: loadingMessage.changeMessage("Velocidade 2");
+        break;
+        case 3: loadingMessage.changeMessage("Velocidade 3");
+        break;
+      }
+      scene.add(alvo);
+    } else {
+      loadingMessage.changeMessage("Pause");
+      scene.remove(alvo);
+    }
+  }
+  if (keyboard.down("1")) {
+    fator = -60;
+    loadingMessage.changeMessage("Velocidade 1");
+    vel = 1;
+  }
+  if (keyboard.down("2")) {
+    fator = -120;
+    loadingMessage.changeMessage("Velocidade 2");
+    vel = 2;
+  }
+  if (keyboard.down("3")) {
+    fator = -180;
+    loadingMessage.changeMessage("Velocidade 3");
+    vel = 3;
+    
   }
 }
 
 function render() {
-  const delta = clock.getDelta();
+  const delta = clock.getDelta() * fator;
   stats.update();
   keyboardUpdate();
 
   if (isFlyOn) {
-    camera.translateZ(delta * -12);
-    aviao.translateX(delta * 12);
-    alvo.translateZ(delta * -12);
-		intersecoesLERPeSLERP();
+    camera.translateZ(delta);
+    aviao.translateX(-1 * delta);
+    alvo.translateZ(delta);
+    intersecoesLERPeSLERP();
   }
 
-	aviao.getWorldPosition(aviaoPosition);
-	currentChunk.getWorldPosition(chunkPosition);
+  aviao.getWorldPosition(aviaoPosition);
+  currentChunk.getWorldPosition(chunkPosition);
 
-	if (aviao.position.z < lastChunkZ + 200) {
-  	const newZ = lastChunkZ - 200;
-  	const newChunk = createChunk(newZ);
-  	scene.add(newChunk);
-  	chunks.push(newChunk);
-  	const oldChunk = chunks.shift();
-  	scene.remove(oldChunk);
-  	lastChunkZ = newZ;
-	}
+  if (aviao.position.z < lastChunkZ + 200) {
+    const newZ = lastChunkZ - 200;
+    const newChunk = createChunk(newZ);
+    scene.add(newChunk);
+    chunks.push(newChunk);
+    const oldChunk = chunks.shift();
+    scene.remove(oldChunk);
+    lastChunkZ = newZ;
+  }
 
   requestAnimationFrame(render);
   renderer.render(scene, camera);
