@@ -11,7 +11,7 @@ export function createEnemy(scene, position) {
     function (gltf) {
       console.log("GLB carregado com sucesso!"); // <-- log 2
       let obj = gltf.scene;
-      obj.scale.set(0.01, 0.01, 0.01); // duck.glb costuma ser ENORME, tente 0.005
+      obj.scale.set(2, 2, 2); // duck.glb costuma ser ENORME, tente 0.005
       obj.position.copy(position);
       obj.userData.isEnemy = true;
       scene.add(obj);

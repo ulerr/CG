@@ -208,9 +208,9 @@ function getHeight(noise, x, z) {
 function spawnEnemies(chunk, amount, zBase) {
   for (let i = 0; i < amount; i++) {
 
-    const x = (Math.random() - 0.5) * 200;
-    const z = zBase - Math.random() * 200;
-    const y = 10 + Math.random() * 10;
+    const x = -15 + Math.random() * 25;
+    const z = zBase + 300 - Math.random() * 200;
+    const y = 15 + Math.random() * 10;
 
     const position = new THREE.Vector3(x, y, z);
 
