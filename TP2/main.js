@@ -6,6 +6,7 @@ import { createAirplane } from "./aviao.js";
 import { createTarget } from "./target.js";
 import KeyboardState from "../libs/util/KeyboardState.js";
 import { createTerrainChunk, getTerrainHeight } from "./terreno.js";
+import { createEnemy } from "./inimigo.js";
 import {
   initRenderer,
   SecondaryBox,
@@ -115,6 +116,7 @@ let lastChunkZ = 0;
 scene.add(currentChunk);
 let chunks = [];
 initChunks();
+spawnEnemies(currentChunk, 2, 0);
 render();
 
 //-- FUNCTIONS ---------------------------------------------------
@@ -142,6 +144,7 @@ function initChunks() {
   lastBorderRow = null;
   for (let i = 0; i < 3; i++) {
     const chunk = createChunk(-i * 200);
+    spawnEnemies(chunk, 2, -i * 200);
     chunks.push(chunk);
   }
   lastChunkZ = -200;
@@ -200,6 +203,19 @@ function intersecoesLERPeSLERP() {
 
 function getHeight(noise, x, z) {
   return noise.noise(x * 0.03, z * 0.03, 0) * 15;
+}
+
+function spawnEnemies(chunk, amount, zBase) {
+  for (let i = 0; i < amount; i++) {
+
+    const x = (Math.random() - 0.5) * 200;
+    const z = zBase - Math.random() * 200;
+    const y = 10 + Math.random() * 10;
+
+    const position = new THREE.Vector3(x, y, z);
+
+    createEnemy(scene, position);
+  }
 }
 
 function spawnTrees(chunk, amount, zBase) {
@@ -319,11 +335,11 @@ function render() {
     const newChunk = createChunk(newZ);
     scene.add(newChunk);
     chunks.push(newChunk);
+    spawnEnemies(newChunk, 2, newZ); 
     const oldChunk = chunks.shift();
     scene.remove(oldChunk);
     lastChunkZ = newZ;
   }
-
   requestAnimationFrame(render);
   renderer.render(scene, camera);
 }
