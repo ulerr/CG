@@ -113,7 +113,10 @@ const chunkPosition = new THREE.Vector3();
 let lastBorderRow = null;
 let currentChunk = createChunk(0);
 let lastChunkZ = 0;
+const delta = clock.getDelta();
 scene.add(currentChunk);
+const enemies = [];
+const bullets = [];
 let chunks = [];
 initChunks();
 spawnEnemies(currentChunk, 2, 0);
@@ -220,7 +223,7 @@ function spawnEnemies(chunk, amount, zBase) {
 
 function spawnTrees(chunk, amount, zBase) {
   const trees = [];
-  const minDistance = 5; // distância mínima entre árvores
+  const minDistance = 8; // distância mínima entre árvores
 
   for (let i = 0; i < amount; i++) {
     let validPosition = false;
@@ -231,13 +234,15 @@ function spawnTrees(chunk, amount, zBase) {
 
       x = (Math.random() - 0.5) * 200;
       z = zBase + (Math.random() - 0.5) * 400;
-
+      const y = getTerrainHeight(x, z);
       // Verifica distância com árvores existentes
       for (let j = 0; j < trees.length; j++) {
-        const dx = x - trees[j].position.x;
-        const dz = z - trees[j].position.z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
 
+        const dx = x - trees[j].position.x;
+        const dy = y - trees[j].position.y;
+        const dz = z - trees[j].position.z;
+
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (distance < minDistance) {
           validPosition = false;
           break;
@@ -281,13 +286,13 @@ function keyboardUpdate() {
   if (keyboard.down("esc")) {
     isFlyOn = !isFlyOn;
     if (isFlyOn) {
-      switch(vel){
+      switch (vel) {
         case 1: loadingMessage.changeMessage("Velocidade 1");
-        break;
+          break;
         case 2: loadingMessage.changeMessage("Velocidade 2");
-        break;
+          break;
         case 3: loadingMessage.changeMessage("Velocidade 3");
-        break;
+          break;
       }
       document.body.style.cursor = 'none';
       scene.add(alvo);
@@ -311,7 +316,7 @@ function keyboardUpdate() {
     fator = -180;
     loadingMessage.changeMessage("Velocidade 3");
     vel = 3;
-    
+
   }
 }
 
@@ -335,11 +340,44 @@ function render() {
     const newChunk = createChunk(newZ);
     scene.add(newChunk);
     chunks.push(newChunk);
-    spawnEnemies(newChunk, 2, newZ); 
+    spawnEnemies(newChunk, 2, newZ);
     const oldChunk = chunks.shift();
     scene.remove(oldChunk);
     lastChunkZ = newZ;
   }
+
+  enemies.forEach(enemy => {
+    if (!enemy) return;
+
+    //direção até o player
+    const direction = new THREE.Vector3()
+      .subVectors(player.position, enemy.position)
+      .normalize();
+
+    //movimento
+    enemy.position.add(direction.clone().multiplyScalar(enemy.userData.speed * delta));
+
+    //faz o inimigo olhar pro player
+    enemy.lookAt(player.position);
+
+    //controle de tiro
+    enemy.userData.shootCooldown -= delta;
+
+    if (enemy.userData.shootCooldown <= 0) {
+      createBullet(scene, enemy.position, direction);
+      enemy.userData.shootCooldown = enemy.userData.shootDelay;
+    }
+  });
+
+  bullets.forEach((bullet, index) => {
+    bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(delta));
+
+    // remove se muito longe
+    if (bullet.position.length() > 500) {
+      scene.remove(bullet);
+      bullets.splice(index, 1);
+    }
+  });
   requestAnimationFrame(render);
   renderer.render(scene, camera);
 }
