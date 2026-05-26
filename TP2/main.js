@@ -26,7 +26,17 @@ renderer.setClearColor(baseColor);
 let scene = new THREE.Scene();
 scene.fog = new THREE.Fog(baseColor, 1, 250);
 
-initDefaultBasicLight(scene, true); // iluminacao basica
+const posLuz = new THREE.Vector3(1, 1, 0);
+const corLuz = "rgb(255,255,255)";
+let luz = new THREE.DirectionalLight(corLuz, 5);
+luz.position.copy(posLuz);
+luz.castShadow = true;
+
+const luzAmbiente = new THREE.AmbientLight(corLuz, 0.1);
+
+scene.add(luz);
+scene.add(luzAmbiente);
+
 document.body.style.cursor = 'none';
 // camera, adicionar modo livre
 const camera = new THREE.PerspectiveCamera(
@@ -39,6 +49,17 @@ let isFlyOn = true;
 camera.position.set(0, 20.0, -10.0);
 camera.lookAt(0, 20, -10);
 camera.up.set(0, 1, 0);
+
+const camRotacaoBase = camera.quaternion.clone();
+
+const maxCamRoll = Math.PI / 18;
+const maxCamYaw = Math.PI / 48;
+const maxCamPitch = Math.PI / 48;
+
+const camQuatRoll = new THREE.Quaternion();
+const camQuatYaw = new THREE.Quaternion();
+const camQuatPitch = new THREE.Quaternion();
+const camRotacaoAlvo = new THREE.Quaternion();
 
 // fps container
 const container = document.getElementById("fps-container");
@@ -203,6 +224,24 @@ function intersecoesLERPeSLERP() {
       .multiply(quatRoll);
 
     aviao.quaternion.slerp(rotacaoAlvo, 0.1);
+
+    const dXcam = aviao.position.x; 
+    const dYcam = aviao.position.y - 17; 
+
+    const fatorBordaX = THREE.MathUtils.smoothstep(Math.abs(dXcam), 10.0, 30.0) * Math.sign(dXcam);
+    const fatorBordaY = THREE.MathUtils.smoothstep(Math.abs(dYcam), 5.0, 15.0) * Math.sign(dYcam);
+
+    const camYaw = -fatorBordaX * maxCamYaw;
+    const camPitch = fatorBordaY * maxCamPitch;
+
+    camQuatYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);
+    camQuatPitch.setFromAxisAngle(new THREE.Vector3(1, 0, 0), camPitch);
+
+    camRotacaoAlvo.copy(camRotacaoBase)
+      .multiply(camQuatYaw)
+      .multiply(camQuatPitch);
+
+    camera.quaternion.slerp(camRotacaoAlvo, 0.03);
   }
 }
 
@@ -333,9 +372,9 @@ function render() {
   keyboardUpdate();
 
   if (isFlyOn) {
-    camera.translateZ(delta);
+    camera.position.z += delta;
     aviao.position.z += delta;
-    alvo.translateZ(delta);
+    alvo.position.z += delta;
     intersecoesLERPeSLERP();
   }
 
