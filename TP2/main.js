@@ -6,7 +6,7 @@ import { createAirplane } from "./aviao.js";
 import { createTarget } from "./target.js";
 import KeyboardState from "../libs/util/KeyboardState.js";
 import { createTerrainChunk, getTerrainHeight } from "./terreno.js";
-import { createEnemy } from "./inimigo.js";
+import { createEnemy, createBullet } from "./inimigo.js";
 import {
   initRenderer,
   SecondaryBox,
@@ -212,14 +212,18 @@ function getHeight(noise, x, z) {
 
 function spawnEnemies(chunk, amount, zBase) {
   for (let i = 0; i < amount; i++) {
+    // surge de uma das laterais em direção à oposta
+    const fromLeft = Math.random() > 0.5;
+    const x = fromLeft ? -45 : 45;
+    const dirX = fromLeft ? 1 : -1;
 
-    const x = -15 + Math.random() * 25;
-    const z = zBase + 300 - Math.random() * 200;
+    // sempre à FRENTE do avião (frente = -Z) para que os tiros venham na direção dele
+    const z = aviao.position.z - (120 + Math.random() * 200);
     const y = 15 + Math.random() * 10;
 
     const position = new THREE.Vector3(x, y, z);
 
-    createEnemy(scene, position);
+    createEnemy(scene, position, enemies, dirX);
   }
 }
 
@@ -323,7 +327,8 @@ function keyboardUpdate() {
 }
 
 function render() {
-  const delta = clock.getDelta() * fator;
+  const rawDelta = clock.getDelta(); // delta real em segundos
+  const delta = rawDelta * fator;
   stats.update();
   keyboardUpdate();
 
