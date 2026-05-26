@@ -89,7 +89,7 @@ buildInterface();
 // o aviao se translada em seu X local
 
 const aviao = createAirplane();
-aviao.traverse(child => { if(child.isMesh) child.castShadow = true; });
+aviao.traverse(child => { if (child.isMesh) child.castShadow = true; });
 aviao.position.set(0, 10, -50);
 const maxRoll = Math.PI / 3;
 const maxPitch = Math.PI / 16;
@@ -163,11 +163,28 @@ const aviaoLerpConfig = {
   alpha: 0.01,
   move: true,
 };
+let tirosTomados = 0;
+const contadorDiv = document.createElement("div");
+contadorDiv.style.cssText = `
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 18px;
+  font-family: monospace;
+  background: rgba(0,0,0,0.4);
+  padding: 6px 16px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 999;
+`;
+contadorDiv.textContent = "Tiros recebidos: 0";
+document.body.appendChild(contadorDiv);
 let vel = 1;
 let fator = -60;
 const chunkPosition = new THREE.Vector3();
 let lastBorderRow = null;
-let currentChunk = createChunk(0);
 let lastChunkZ = 0;
 const delta = clock.getDelta();
 const enemies = [];
@@ -232,7 +249,7 @@ function intersecoesLERPeSLERP() {
 
     alvo.position.x = THREE.MathUtils.lerp(alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
     alvo.position.y = THREE.MathUtils.lerp(alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
-  
+
     aviao.position.x = THREE.MathUtils.lerp(aviao.position.x, pontoIntersecao.x, alphaX);
     aviao.position.y = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y - 3, alphaY);
 
@@ -256,8 +273,8 @@ function intersecoesLERPeSLERP() {
 
     aviao.quaternion.slerp(rotacaoAlvo, 0.1);
 
-    const dXcam = aviao.position.x; 
-    const dYcam = aviao.position.y - 17; 
+    const dXcam = aviao.position.x;
+    const dYcam = aviao.position.y - 17;
 
     const fatorBordaX = THREE.MathUtils.smoothstep(Math.abs(dXcam), 5.0, 25.0) * Math.sign(dXcam);
     const fatorBordaY = THREE.MathUtils.smoothstep(Math.abs(dYcam), 5.0, 15.0) * Math.sign(dYcam);
@@ -295,8 +312,7 @@ function spawnEnemies(chunk, amount, zBase) {
     const x = fromLeft ? -45 : 45;
     const dirX = fromLeft ? 1 : -1;
 
-    // sempre à FRENTE do avião (frente = -Z) para que os tiros venham na direção dele
-    const z = aviao.position.z - (120 + Math.random() * 200);
+    const z = zBase - (20 + Math.random() * 160);  // distribuído dentro do chunk
     const y = 15 + Math.random() * 10;
 
     const position = new THREE.Vector3(x, y, z);
@@ -418,8 +434,8 @@ function render() {
     luz.position.set(aviao.position.x + 80, aviao.position.y + 100, aviao.position.z + 40);
     luz.target = aviao;
 
-    const alcanceVisivel = scene.fog.far; 
-    
+    const alcanceVisivel = scene.fog.far;
+
     luz.shadow.camera.near = 1;
     luz.shadow.camera.far = alcanceVisivel + 50;
 
@@ -432,7 +448,6 @@ function render() {
   }
 
   aviao.getWorldPosition(aviaoPosition);
-  currentChunk.getWorldPosition(chunkPosition);
 
   if (aviao.position.z < lastChunkZ + 200) {
     const newZ = lastChunkZ - 200;
@@ -444,104 +459,123 @@ function render() {
     scene.remove(oldChunk);
     lastChunkZ = newZ;
   }
+  if (isFlyOn) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const enemy = enemies[i];
+      if (!enemy) continue;
 
- for (let i = enemies.length - 1; i >= 0; i--) {
-    const enemy = enemies[i];
-    if (!enemy) continue;
+      // animação de morte: encolhe, gira e cai; depois é removido
+      if (enemy.userData.dying) {
+        enemy.userData.deathTime += rawDelta;
+        const t = enemy.userData.deathTime / 0.5; // 0.5s de animação
+        enemy.scale.setScalar(Math.max(0, 2 * (1 - t))); // escala base do pato = 2
+        enemy.rotation.z += rawDelta * 8;
+        enemy.position.y -= rawDelta * 12;
+        if (t >= 1) {
+          scene.remove(enemy);
+          enemies.splice(i, 1);
+        }
+        continue; // enquanto morre não se move nem atira
+      }
 
-    // animação de morte: encolhe, gira e cai; depois é removido
-    if (enemy.userData.dying) {
-      enemy.userData.deathTime += rawDelta;
-      const t = enemy.userData.deathTime / 0.5; // 0.5s de animação
-      enemy.scale.setScalar(Math.max(0, 2 * (1 - t))); // escala base do pato = 2
-      enemy.rotation.z += rawDelta * 8;
-      enemy.position.y -= rawDelta * 12;
-      if (t >= 1) {
+      // remove os que já ficaram para trás do avião (frente = -Z)
+      if (enemy.position.z > aviao.position.z + 30) {
         scene.remove(enemy);
         enemies.splice(i, 1);
+        continue;
       }
-      continue; // enquanto morre não se move nem atira
-    }
 
-    // remove os que já ficaram para trás do avião (frente = -Z)
-    if (enemy.position.z > aviao.position.z + 80) {
-      scene.remove(enemy);
-      enemies.splice(i, 1);
-      continue;
-    }
+      // movimento lateral: de uma lateral em direção à oposta
+      enemy.position.x += enemy.userData.moveDir * enemy.userData.speed * rawDelta;
 
-    // movimento lateral: de uma lateral em direção à oposta
-    enemy.position.x += enemy.userData.moveDir * enemy.userData.speed * rawDelta;
-
-    // direção até o avião, recalculada a cada tiro para mirar nele
-    const direction = new THREE.Vector3()
-      .subVectors(aviao.position, enemy.position)
-      .normalize();
-
-    // cadência baseada em tempo real (segundos)
-    enemy.userData.shootCooldown -= rawDelta;
-    if (enemy.userData.shootCooldown <= 0) {
-      createBullet(scene, enemy.position, direction, bullets);
-      enemy.userData.shootCooldown = enemy.userData.shootDelay;
-    }
-  }
-
-  // tiros: avançam em linha reta e somem pelo tempo de vida (não pela origem do mundo)
-  for (let i = bullets.length - 1; i >= 0; i--) {
-    const bullet = bullets[i];
-    bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(rawDelta));
-    bullet.userData.life -= rawDelta;
-    if (bullet.userData.life <= 0) {
-      scene.remove(bullet);
-      bullets.splice(i, 1);
-    }
-  }
-  // --- Tiro do player: dispara ao segurar o botão esquerdo (com cadência) ---
-  if (isFlyOn && isMouseDown) {
-    playerShootCooldown -= rawDelta;
-    if (playerShootCooldown <= 0) {
-      const dir = new THREE.Vector3()
-        .subVectors(alvo.position, aviao.position)
+      // direção até o avião, recalculada a cada tiro para mirar nele
+      const direction = new THREE.Vector3()
+        .subVectors(aviao.position, enemy.position)
         .normalize();
-      const origin = aviao.position.clone().add(dir.clone().multiplyScalar(4));
-      const shotSpeed = 200 + vel * 60; // muda com o modo de velocidade (1/2/3)
-      createPlayerShot(scene, origin, dir, playerShots, shotSpeed);
-      playerShootCooldown = playerShootDelay;
-    }
-  }
 
-  // --- Move tiros do player, testa colisão (bounding box) e tempo de vida ---
-  for (let i = playerShots.length - 1; i >= 0; i--) {
-    const shot = playerShots[i];
-
-    const prevPos = shot.position.clone();
-    shot.position.add(shot.userData.velocity.clone().multiplyScalar(rawDelta));
-    shot.userData.life -= rawDelta;
-
-    // caixa que cobre o trajeto do tiro neste frame (evita atravessar o inimigo)
-    const shotBox = new THREE.Box3()
-      .setFromPoints([prevPos, shot.position])
-      .expandByScalar(0.5);
-
-    let hit = false;
-    for (let j = enemies.length - 1; j >= 0; j--) {
-      const enemy = enemies[j];
-      if (!enemy || enemy.userData.dying) continue;
-      const enemyBox = new THREE.Box3().setFromObject(enemy);
-      if (shotBox.intersectsBox(enemyBox)) {
-        enemy.userData.dying = true; // inicia a animação de morte
-        enemy.userData.deathTime = 0;
-        hit = true;
-        break;
+      // cadência baseada em tempo real (segundos)
+      enemy.userData.shootCooldown -= rawDelta;
+      if (enemy.userData.shootCooldown <= 0) {
+        createBullet(scene, enemy.position, direction, bullets, fator);
+        enemy.userData.shootCooldown = enemy.userData.shootDelay;
       }
     }
 
-    if (hit || shot.userData.life <= 0) {
-      scene.remove(shot);
-      playerShots.splice(i, 1);
+    // tiros: avançam em linha reta e somem pelo tempo de vida (não pela origem do mundo)
+    const aviaoBox = new THREE.Box3().setFromObject(aviao);
+
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const bullet = bullets[i];
+
+      const prevPos = bullet.position.clone();
+      bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(rawDelta));
+      bullet.userData.life -= rawDelta;
+
+      // caixa que cobre o trajeto do tiro neste frame
+      const bulletBox = new THREE.Box3()
+        .setFromPoints([prevPos, bullet.position])
+        .expandByScalar(0.3);
+
+      if (bulletBox.intersectsBox(aviaoBox)) {
+        tirosTomados++;
+        contadorDiv.textContent = "Tiros recebidos: " + tirosTomados;
+        scene.remove(bullet);
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      if (bullet.userData.life <= 0) {
+        scene.remove(bullet);
+        bullets.splice(i, 1);
+      }
+    }
+
+    if (isMouseDown) {
+      playerShootCooldown -= rawDelta;
+      if (playerShootCooldown <= 0) {
+        const dir = new THREE.Vector3()
+          .subVectors(alvo.position, aviao.position)
+          .normalize();
+        const origin = aviao.position.clone().add(dir.clone().multiplyScalar(4));
+        const shotSpeed = 200 + vel * 60;
+        createPlayerShot(scene, origin, dir, playerShots, shotSpeed);
+        playerShootCooldown = playerShootDelay;
+      }
+    }
+
+
+    // --- Move tiros do player, testa colisão (bounding box) e tempo de vida ---
+    for (let i = playerShots.length - 1; i >= 0; i--) {
+      const shot = playerShots[i];
+
+      const prevPos = shot.position.clone();
+      shot.position.add(shot.userData.velocity.clone().multiplyScalar(rawDelta));
+      shot.userData.life -= rawDelta;
+
+      // caixa que cobre o trajeto do tiro neste frame (evita atravessar o inimigo)
+      const shotBox = new THREE.Box3()
+        .setFromPoints([prevPos, shot.position])
+        .expandByScalar(0.5);
+
+      let hit = false;
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const enemy = enemies[j];
+        if (!enemy || enemy.userData.dying) continue;
+        const enemyBox = new THREE.Box3().setFromObject(enemy);
+        if (shotBox.intersectsBox(enemyBox)) {
+          enemy.userData.dying = true; // inicia a animação de morte
+          enemy.userData.deathTime = 0;
+          hit = true;
+          break;
+        }
+      }
+
+      if (hit || shot.userData.life <= 0) {
+        scene.remove(shot);
+        playerShots.splice(i, 1);
+      }
     }
   }
-
   requestAnimationFrame(render);
   renderer.render(scene, camera);
 }

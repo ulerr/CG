@@ -21,7 +21,7 @@ export function createEnemy(scene, position, enemies, dirX = 1) {
   );
 }
 
-export function createBullet(scene, position, direction, bullets) {
+export function createBullet(scene, position, direction, bullets, worldVelocityZ = 0) {
   const geometry = new THREE.ConeGeometry(0.1, 0.5, 8);
   const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
@@ -29,9 +29,9 @@ export function createBullet(scene, position, direction, bullets) {
 
   bullet.position.copy(position);
 
-  bullet.userData = {
-    velocity: direction.clone().multiplyScalar(30),
-    life: 4 // segundos de vida antes de sumir
+ bullet.userData = {
+    velocity: direction.clone().multiplyScalar(30).add(new THREE.Vector3(0, 0, worldVelocityZ)),
+    life: 4
   };
 
   bullet.quaternion.setFromUnitVectors(
