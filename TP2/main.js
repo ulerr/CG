@@ -61,8 +61,8 @@ buildInterface();
 const aviao = createAirplane();
 aviao.position.set(0, 10, -50);
 const maxRoll = Math.PI / 3;
-const maxPitch = Math.PI / 4;
-const maxYaw = Math.PI / 8;
+const maxPitch = Math.PI / 16;
+const maxYaw = Math.PI / 16;
 const eixoRoll = new THREE.Vector3(1, 0, 0);
 const eixoPitch = new THREE.Vector3(0, 0, 1);
 const eixoYaw = new THREE.Vector3(0, 1, 0);
@@ -102,12 +102,12 @@ var intersecaoMouse = new THREE.Vector3();
 
 const alvoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.015,
+  alpha: 0.01,
   move: true,
 };
 const aviaoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.015,
+  alpha: 0.01,
   move: true,
 };
 let vel = 1;
@@ -188,7 +188,7 @@ function intersecoesLERPeSLERP() {
     const smoothY = THREE.MathUtils.smoothstep(absY, 1, 6);
 
     const anguloRoll = THREE.MathUtils.clamp(dX * 0.35, -maxRoll, maxRoll) * smoothX;
-    const anguloYaw = THREE.MathUtils.clamp(dX * 0.04, -maxYaw, maxYaw) * smoothX;
+    const anguloYaw = THREE.MathUtils.clamp(dX * 0.06, -maxYaw, maxYaw) * smoothX;
     const anguloPitch = THREE.MathUtils.clamp(dY * 0.04, -maxPitch, maxPitch) * smoothY;
 
     quatRoll.setFromAxisAngle(eixoRoll, anguloRoll);
@@ -348,38 +348,44 @@ function render() {
     lastChunkZ = newZ;
   }
 
-  enemies.forEach(enemy => {
-    if (!enemy) return;
+  // inimigos: movimento lateral + tiro mirando no avião
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const enemy = enemies[i];
+    if (!enemy) continue;
 
-    //direção até o player
+    // remove os que já ficaram para trás do avião (frente = -Z)
+    if (enemy.position.z > aviao.position.z + 80) {
+      scene.remove(enemy);
+      enemies.splice(i, 1);
+      continue;
+    }
+
+    // movimento lateral: de uma lateral em direção à oposta
+    enemy.position.x += enemy.userData.moveDir * enemy.userData.speed * rawDelta;
+
+    // direção até o avião, recalculada a cada tiro para mirar nele
     const direction = new THREE.Vector3()
-      .subVectors(player.position, enemy.position)
+      .subVectors(aviao.position, enemy.position)
       .normalize();
 
-    //movimento
-    enemy.position.add(direction.clone().multiplyScalar(enemy.userData.speed * delta));
-
-    //faz o inimigo olhar pro player
-    enemy.lookAt(player.position);
-
-    //controle de tiro
-    enemy.userData.shootCooldown -= delta;
-
+    // cadência baseada em tempo real (segundos)
+    enemy.userData.shootCooldown -= rawDelta;
     if (enemy.userData.shootCooldown <= 0) {
-      createBullet(scene, enemy.position, direction);
+      createBullet(scene, enemy.position, direction, bullets);
       enemy.userData.shootCooldown = enemy.userData.shootDelay;
     }
-  });
+  }
 
-  bullets.forEach((bullet, index) => {
-    bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(delta));
-
-    // remove se muito longe
-    if (bullet.position.length() > 500) {
+  // tiros: avançam em linha reta e somem pelo tempo de vida (não pela origem do mundo)
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const bullet = bullets[i];
+    bullet.position.add(bullet.userData.velocity.clone().multiplyScalar(rawDelta));
+    bullet.userData.life -= rawDelta;
+    if (bullet.userData.life <= 0) {
       scene.remove(bullet);
-      bullets.splice(index, 1);
+      bullets.splice(i, 1);
     }
-  });
+  }
   requestAnimationFrame(render);
   renderer.render(scene, camera);
 }

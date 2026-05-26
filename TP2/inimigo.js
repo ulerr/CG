@@ -1,27 +1,28 @@
 import * as THREE from "three";
-import {GLTFLoader} from '../build/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader } from '../build/jsm/loaders/GLTFLoader.js';
 
-export function createEnemy(scene, position) {
+export function createEnemy(scene, position, enemies, dirX = 1) {
   const loader = new GLTFLoader();
 
   loader.load(
     './assets/duck.glb',
     function (gltf) {
       let obj = gltf.scene;
-      obj.scale.set(2, 2, 2); 
+      obj.scale.set(2, 2, 2);
       obj.position.copy(position);
       obj.userData.isEnemy = true;
-      obj.userData.speed = 5;
-      obj.userData.shootCooldown = 3;
-      obj.userData.shootDelay = 2;
+      obj.userData.speed = 12;      // velocidade lateral (atravessar a tela)
+      obj.userData.moveDir = dirX;  // +1 vai p/ direita, -1 p/ esquerda
+      obj.userData.shootCooldown = 1;
+      obj.userData.shootDelay = 1;  // segundos entre tiros
       scene.add(obj);
       enemies.push(obj);
     }
   );
 }
 
-function createBullet(scene, position, direction) {
-  const geometry = new THREE.SphereGeometry(0.2);
+export function createBullet(scene, position, direction, bullets) {
+  const geometry = new THREE.ConeGeometry(0.1, 0.5, 8);
   const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
   const bullet = new THREE.Mesh(geometry, material);
@@ -29,8 +30,14 @@ function createBullet(scene, position, direction) {
   bullet.position.copy(position);
 
   bullet.userData = {
-    velocity: direction.clone().multiplyScalar(30)
+    velocity: direction.clone().multiplyScalar(30),
+    life: 4 // segundos de vida antes de sumir
   };
+
+  bullet.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0), // cone aponta em Y por padrão
+    direction.normalize()
+  );
 
   scene.add(bullet);
   bullets.push(bullet);
