@@ -35,6 +35,14 @@ luz.castShadow = true;
 
 const luzAmbiente = new THREE.AmbientLight(corLuz, 0.3);
 
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras suaves macias
+
+luz.castShadow = true;
+luz.shadow.mapSize.width = 2048;  // Boa resolução sem travar
+luz.shadow.mapSize.height = 2048;
+luz.shadow.bias = -0.0005;
+
 scene.add(luz);
 scene.add(luzAmbiente);
 
@@ -81,6 +89,7 @@ buildInterface();
 // o aviao se translada em seu X local
 
 const aviao = createAirplane();
+aviao.traverse(child => { if(child.isMesh) child.castShadow = true; });
 aviao.position.set(0, 10, -50);
 const maxRoll = Math.PI / 3;
 const maxPitch = Math.PI / 16;
@@ -405,6 +414,21 @@ function render() {
     aviao.position.z += delta;
     alvo.position.z += delta;
     intersecoesLERPeSLERP();
+
+    luz.position.set(aviao.position.x + 80, aviao.position.y + 100, aviao.position.z + 40);
+    luz.target = aviao;
+
+    const alcanceVisivel = scene.fog.far; 
+    
+    luz.shadow.camera.near = 1;
+    luz.shadow.camera.far = alcanceVisivel + 50;
+
+    luz.shadow.camera.left = -alcanceVisivel * 0.5;
+    luz.shadow.camera.right = alcanceVisivel * 0.5;
+    luz.shadow.camera.top = alcanceVisivel * 0.5;
+    luz.shadow.camera.bottom = -alcanceVisivel * 0.5;
+
+    luz.shadow.camera.updateProjectionMatrix();
   }
 
   aviao.getWorldPosition(aviaoPosition);

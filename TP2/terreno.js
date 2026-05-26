@@ -122,6 +122,7 @@ export function createTerrain() {
 
   const terrain = new THREE.Mesh(geometry, material);
   terrain.receiveShadow = true;
+  terrain.castShadow = true;
 
   return terrain;
 }

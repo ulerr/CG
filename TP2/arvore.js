@@ -26,6 +26,15 @@ export function createTree1() {
    let foliage3 = new THREE.Mesh(foliageGeometry3, foliageMaterial);
    foliage3.position.y = 6.5; 
    tree.add(foliage3);
+
+   trunk.castShadow = true;
+   trunk.receiveShadow = true;
+   foliage.castShadow = true;
+   foliage.receiveShadow = true;
+   foliage2.castShadow = true;
+   foliage2.receiveShadow = true;
+   foliage3.castShadow = true;
+   foliage3.receiveShadow = true;
    return tree;
 }
 
@@ -41,5 +50,10 @@ export function createTree2(){
    foliage.position.y = 4;
    tree.add(foliage);
 
+   trunk.castShadow = true;
+   trunk.receiveShadow = true;
+   foliage.castShadow = true;
+   foliage.receiveShadow = true;
+   
    return tree;
 }
