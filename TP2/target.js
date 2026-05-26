@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 export function createTarget() {
   const target = new THREE.Object3D();
-  const material = new THREE.MeshLambertMaterial({ color: "orangered" });
+  const material = new THREE.MeshBasicMaterial({ color: "orangered" });
   const geometry = new THREE.BoxGeometry( 0.5, 0.5, 0.05 );
 
   for (let x = 0; x < 2; x++) {
@@ -11,8 +11,6 @@ export function createTarget() {
   		line1.position.x = -1 + 2*x;
 		line1.position.y = -1 + 1.5*y;
 		line1.position.z =  0;
-				
-		line1.receiveShadow = false;
   		target.add(line1);
 
 		let line2 = new THREE.Mesh(geometry, material);
@@ -20,8 +18,6 @@ export function createTarget() {
 		line2.position.y = -1 + 1.5*y;
 		line2.position.z =  0;
 		line2.rotation.z = Math.PI / 2;
-				
-		line2.receiveShadow = false;
 		target.add(line2);
 
 		if (x == 0)

@@ -53,8 +53,8 @@ camera.up.set(0, 1, 0);
 
 const camRotacaoBase = camera.quaternion.clone();
 
-const maxCamRoll = Math.PI / 18;
-const maxCamYaw = Math.PI / 48;
+const maxCamRoll = Math.PI / 16;
+const maxCamYaw = Math.PI / 32;
 const maxCamPitch = Math.PI / 48;
 
 const camQuatRoll = new THREE.Quaternion();
@@ -250,7 +250,7 @@ function intersecoesLERPeSLERP() {
     const dXcam = aviao.position.x; 
     const dYcam = aviao.position.y - 17; 
 
-    const fatorBordaX = THREE.MathUtils.smoothstep(Math.abs(dXcam), 10.0, 30.0) * Math.sign(dXcam);
+    const fatorBordaX = THREE.MathUtils.smoothstep(Math.abs(dXcam), 5.0, 25.0) * Math.sign(dXcam);
     const fatorBordaY = THREE.MathUtils.smoothstep(Math.abs(dYcam), 5.0, 15.0) * Math.sign(dYcam);
 
     const camYaw = -fatorBordaX * maxCamYaw;
@@ -263,7 +263,16 @@ function intersecoesLERPeSLERP() {
       .multiply(camQuatYaw)
       .multiply(camQuatPitch);
 
-    camera.quaternion.slerp(camRotacaoAlvo, 0.03);
+    camera.quaternion.slerp(camRotacaoAlvo, 0.008);
+
+    const dXmax = 6.0;
+    const dYmax = 4.0;
+
+    const targetCamX = fatorBordaX * dXmax;
+    const targetCamY = 20.0 + (fatorBordaY * dYmax);
+
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetCamX, 0.02);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.02);
   }
 }
 
