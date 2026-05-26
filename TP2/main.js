@@ -62,10 +62,13 @@ const aviao = createAirplane();
 aviao.position.set(0, 10, -50);
 const maxRoll = Math.PI / 3;
 const maxPitch = Math.PI / 4;
+const maxYaw = Math.PI / 8;
 const eixoRoll = new THREE.Vector3(1, 0, 0);
 const eixoPitch = new THREE.Vector3(0, 0, 1);
+const eixoYaw = new THREE.Vector3(0, 1, 0);
 const quatRoll = new THREE.Quaternion();
 const quatPitch = new THREE.Quaternion();
+const quatYaw = new THREE.Quaternion();
 const rotacaoBase = new THREE.Quaternion().setFromEuler(
   new THREE.Euler(0, Math.PI / 2, 0),
 );
@@ -76,7 +79,7 @@ aviao.quaternion.copy(rotacaoBase); // Força o avião a começar olhando para f
 scene.add(aviao);
 
 const alvo = createTarget();
-alvo.position.set(0, 5, -50);
+alvo.position.set(0, 5, -80);
 scene.add(alvo);
 
 window.addEventListener(
@@ -90,8 +93,8 @@ window.addEventListener("mousemove", onMouseMove);
 
 // sincronização alvo e mouse
 const planoAlvoNormal = new THREE.Vector3(0, 0, 1);
-const planoAlvo = new THREE.Plane(planoAlvoNormal, 50);
-const pontoIntersecao = new THREE.Vector3();
+const planoAlvo = new THREE.Plane(planoAlvoNormal, 80);
+let pontoIntersecao = new THREE.Vector3();
 
 const raycaster = new THREE.Raycaster();
 var posMouse = new THREE.Vector2();
@@ -99,12 +102,12 @@ var intersecaoMouse = new THREE.Vector3();
 
 const alvoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.04,
+  alpha: 0.015,
   move: true,
 };
 const aviaoLerpConfig = {
   destination: new THREE.Vector3(),
-  alpha: 0.04,
+  alpha: 0.015,
   move: true,
 };
 let vel = 1;
@@ -167,40 +170,39 @@ function intersecoesLERPeSLERP() {
   raycaster.ray.intersectPlane(planoAlvo, pontoIntersecao);
 
   if (pontoIntersecao && aviaoLerpConfig.move && alvoLerpConfig.move) {
-    alvo.position.x = THREE.MathUtils.lerp(
-      alvo.position.x,
-      pontoIntersecao.x,
-      alvoLerpConfig.alpha,
-    );
-    alvo.position.y = THREE.MathUtils.lerp(
-      alvo.position.y,
-      pontoIntersecao.y,
-      alvoLerpConfig.alpha,
-    );
-    aviao.position.x = THREE.MathUtils.lerp(
-      aviao.position.x,
-      pontoIntersecao.x,
-      aviaoLerpConfig.alpha,
-    );
-    aviao.position.y = THREE.MathUtils.lerp(
-      aviao.position.y,
-      pontoIntersecao.y - 3,
-      aviaoLerpConfig.alpha,
-    );
-
     const dX = pontoIntersecao.x - aviao.position.x;
-    let anguloRoll = THREE.MathUtils.clamp(dX * 0.15, -maxRoll, maxRoll);
-    quatRoll.setFromAxisAngle(eixoRoll, anguloRoll);
-
     const dY = pontoIntersecao.y - (aviao.position.y + 3);
-    let anguloPitch = THREE.MathUtils.clamp(dY * 0.05, -maxPitch, maxPitch);
+    const absX = Math.abs(dX);
+    const absY = Math.abs(dY);
+
+    const alphaX = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absX, 0.0, 3.0) * 0.8 + 0.2);
+    const alphaY = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absY, 0.0, 3.0) * 0.8 + 0.2);
+
+    alvo.position.x = THREE.MathUtils.lerp(alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
+    alvo.position.y = THREE.MathUtils.lerp(alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
+  
+    aviao.position.x = THREE.MathUtils.lerp(aviao.position.x, pontoIntersecao.x, alphaX);
+    aviao.position.y = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y - 3, alphaY);
+
+    const smoothX = THREE.MathUtils.smoothstep(absX, 2, 12);
+    const smoothY = THREE.MathUtils.smoothstep(absY, 1, 6);
+
+    const anguloRoll = THREE.MathUtils.clamp(dX * 0.35, -maxRoll, maxRoll) * smoothX;
+    const anguloYaw = THREE.MathUtils.clamp(dX * 0.04, -maxYaw, maxYaw) * smoothX;
+    const anguloPitch = THREE.MathUtils.clamp(dY * 0.04, -maxPitch, maxPitch) * smoothY;
+
+    quatRoll.setFromAxisAngle(eixoRoll, anguloRoll);
+    quatYaw.setFromAxisAngle(eixoYaw, anguloYaw);
     quatPitch.setFromAxisAngle(eixoPitch, anguloPitch);
 
     // Combina a rotação base (aviao modelado em outro eixo) com a rolagem e guinagem
     // ordem importa
-    rotacaoAlvo.copy(rotacaoBase).multiply(quatPitch).multiply(quatRoll);
+    rotacaoAlvo.copy(rotacaoBase)
+      .multiply(quatYaw)
+      .multiply(quatPitch)
+      .multiply(quatRoll);
 
-    aviao.quaternion.slerp(rotacaoAlvo, aviaoLerpConfig.alpha * 2);
+    aviao.quaternion.slerp(rotacaoAlvo, 0.1);
   }
 }
 
@@ -327,7 +329,7 @@ function render() {
 
   if (isFlyOn) {
     camera.translateZ(delta);
-    aviao.translateX(-1 * delta);
+    aviao.position.z += delta;
     alvo.translateZ(delta);
     intersecoesLERPeSLERP();
   }
