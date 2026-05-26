@@ -27,13 +27,13 @@ renderer.setClearColor(baseColor);
 let scene = new THREE.Scene();
 scene.fog = new THREE.Fog(baseColor, 1, 250);
 
-const posLuz = new THREE.Vector3(1, 1, 0);
+const posLuz = new THREE.Vector3(1, 0, 0);
 const corLuz = "rgb(255,255,255)";
 let luz = new THREE.DirectionalLight(corLuz, 5);
 luz.position.copy(posLuz);
 luz.castShadow = true;
 
-const luzAmbiente = new THREE.AmbientLight(corLuz, 0.1);
+const luzAmbiente = new THREE.AmbientLight(corLuz, 0.3);
 
 scene.add(luz);
 scene.add(luzAmbiente);
