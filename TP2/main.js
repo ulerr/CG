@@ -7,6 +7,7 @@ import { createTarget } from "./target.js";
 import KeyboardState from "../libs/util/KeyboardState.js";
 import { createTerrainChunk, getTerrainHeight } from "./terreno.js";
 import { createEnemy, createBullet } from "./inimigo.js";
+import { createPlayerShot } from "./tiroJogador.js";
 import {
   initRenderer,
   SecondaryBox,
@@ -112,6 +113,28 @@ window.addEventListener(
 );
 window.addEventListener("mousemove", onMouseMove);
 
+// --- Tiro do player ---
+const playerShots = [];
+let isMouseDown = false;
+let playerShootCooldown = 0;
+const playerShootDelay = 0.15; // cadência (s) ao manter o botão esquerdo pressionado
+
+window.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return; // apenas botão esquerdo
+  if (!isFlyOn) {
+    // clicar na tela retoma a simulação (enunciado: ESC pausa, clique retoma)
+    isFlyOn = true;
+    document.body.style.cursor = "none";
+    scene.add(alvo);
+    loadingMessage.changeMessage("Velocidade " + vel);
+  } else {
+    isMouseDown = true;
+  }
+});
+window.addEventListener("mouseup", (e) => {
+  if (e.button === 0) isMouseDown = false;
+});
+
 // sincronização alvo e mouse
 const planoAlvoNormal = new THREE.Vector3(0, 0, 1);
 const planoAlvo = new THREE.Plane(planoAlvoNormal, 80);
@@ -138,12 +161,10 @@ let lastBorderRow = null;
 let currentChunk = createChunk(0);
 let lastChunkZ = 0;
 const delta = clock.getDelta();
-scene.add(currentChunk);
 const enemies = [];
 const bullets = [];
 let chunks = [];
 initChunks();
-spawnEnemies(currentChunk, 2, 0);
 render();
 
 //-- FUNCTIONS ---------------------------------------------------
@@ -172,9 +193,10 @@ function initChunks() {
   for (let i = 0; i < 3; i++) {
     const chunk = createChunk(-i * 200);
     spawnEnemies(chunk, 2, -i * 200);
+    scene.add(chunk);
     chunks.push(chunk);
   }
-  lastChunkZ = -200;
+  lastChunkZ = -400;
 }
 
 // atualiza movimento do mouse por event
@@ -251,7 +273,6 @@ function getHeight(noise, x, z) {
 
 function spawnEnemies(chunk, amount, zBase) {
   for (let i = 0; i < amount; i++) {
-    // surge de uma das laterais em direção à oposta
     const fromLeft = Math.random() > 0.5;
     const x = fromLeft ? -45 : 45;
     const dirX = fromLeft ? 1 : -1;
@@ -261,7 +282,6 @@ function spawnEnemies(chunk, amount, zBase) {
     const y = 15 + Math.random() * 10;
 
     const position = new THREE.Vector3(x, y, z);
-
     createEnemy(scene, position, enemies, dirX);
   }
 }
@@ -392,10 +412,23 @@ function render() {
     lastChunkZ = newZ;
   }
 
-  // inimigos: movimento lateral + tiro mirando no avião
-  for (let i = enemies.length - 1; i >= 0; i--) {
+ for (let i = enemies.length - 1; i >= 0; i--) {
     const enemy = enemies[i];
     if (!enemy) continue;
+
+    // animação de morte: encolhe, gira e cai; depois é removido
+    if (enemy.userData.dying) {
+      enemy.userData.deathTime += rawDelta;
+      const t = enemy.userData.deathTime / 0.5; // 0.5s de animação
+      enemy.scale.setScalar(Math.max(0, 2 * (1 - t))); // escala base do pato = 2
+      enemy.rotation.z += rawDelta * 8;
+      enemy.position.y -= rawDelta * 12;
+      if (t >= 1) {
+        scene.remove(enemy);
+        enemies.splice(i, 1);
+      }
+      continue; // enquanto morre não se move nem atira
+    }
 
     // remove os que já ficaram para trás do avião (frente = -Z)
     if (enemy.position.z > aviao.position.z + 80) {
@@ -430,6 +463,52 @@ function render() {
       bullets.splice(i, 1);
     }
   }
+  // --- Tiro do player: dispara ao segurar o botão esquerdo (com cadência) ---
+  if (isFlyOn && isMouseDown) {
+    playerShootCooldown -= rawDelta;
+    if (playerShootCooldown <= 0) {
+      const dir = new THREE.Vector3()
+        .subVectors(alvo.position, aviao.position)
+        .normalize();
+      const origin = aviao.position.clone().add(dir.clone().multiplyScalar(4));
+      const shotSpeed = 200 + vel * 60; // muda com o modo de velocidade (1/2/3)
+      createPlayerShot(scene, origin, dir, playerShots, shotSpeed);
+      playerShootCooldown = playerShootDelay;
+    }
+  }
+
+  // --- Move tiros do player, testa colisão (bounding box) e tempo de vida ---
+  for (let i = playerShots.length - 1; i >= 0; i--) {
+    const shot = playerShots[i];
+
+    const prevPos = shot.position.clone();
+    shot.position.add(shot.userData.velocity.clone().multiplyScalar(rawDelta));
+    shot.userData.life -= rawDelta;
+
+    // caixa que cobre o trajeto do tiro neste frame (evita atravessar o inimigo)
+    const shotBox = new THREE.Box3()
+      .setFromPoints([prevPos, shot.position])
+      .expandByScalar(0.5);
+
+    let hit = false;
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const enemy = enemies[j];
+      if (!enemy || enemy.userData.dying) continue;
+      const enemyBox = new THREE.Box3().setFromObject(enemy);
+      if (shotBox.intersectsBox(enemyBox)) {
+        enemy.userData.dying = true; // inicia a animação de morte
+        enemy.userData.deathTime = 0;
+        hit = true;
+        break;
+      }
+    }
+
+    if (hit || shot.userData.life <= 0) {
+      scene.remove(shot);
+      playerShots.splice(i, 1);
+    }
+  }
+
   requestAnimationFrame(render);
   renderer.render(scene, camera);
 }
