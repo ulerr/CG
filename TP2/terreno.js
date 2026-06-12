@@ -138,8 +138,8 @@ export function getTerrainHeight(x, z) {
 }
 
 export function createTerrainChunk(zOffset = 0) {
-  const size = 400;
-  const segments = 100;
+  const size = 600;
+  const segments = 150;
 
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
   geometry.rotateX(-Math.PI / 2);

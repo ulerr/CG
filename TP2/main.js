@@ -27,7 +27,7 @@ renderer.setClearColor(baseColor);
 let scene = new THREE.Scene();
 scene.fog = new THREE.Fog(baseColor, 1, 250);
 
-const posLuz = new THREE.Vector3(1, 1, 0);
+const posLuz = new THREE.Vector3(1, 0, 0);
 const corLuz = "rgb(255,255,255)";
 let luz = new THREE.DirectionalLight(corLuz, 5);
 luz.position.copy(posLuz);
@@ -208,7 +208,7 @@ function createChunk(zPosition) {
 
   chunk.add(terrain);
 
-  let trees = (Math.random() * 100 + 100 + 1) | 0;
+  let trees = (Math.random() * 150 + 150 + 1) | 0;
   spawnTrees(chunk, trees, zPosition);
 
   return chunk;
@@ -354,7 +354,7 @@ function spawnTrees(chunk, amount, zBase) {
       Math.random() > 0.5 ? createTree1().clone() : createTree2().clone();
 
     const y = getTerrainHeight(x, z);
-    tree.position.set(x, y, z);
+    tree.position.set(x, y - 0.5, z);
 
     // escala aleatória
     const scale = 0.5 + Math.random() * 0.8;
@@ -377,7 +377,7 @@ function buildInterface() {
   })();
 
   var gui = new GUI();
-  gui.add(scene.fog, "far", 16, 500).name("Fog Distance");
+  gui.add(scene.fog, "far", 16, 600).name("Fog Distance");
 }
 
 function keyboardUpdate() {
@@ -449,8 +449,8 @@ function render() {
 
   aviao.getWorldPosition(aviaoPosition);
 
-  if (aviao.position.z < lastChunkZ + 200) {
-    const newZ = lastChunkZ - 200;
+  if (aviao.position.z < lastChunkZ + 350) {
+    const newZ = lastChunkZ - 350;
     const newChunk = createChunk(newZ);
     scene.add(newChunk);
     chunks.push(newChunk);

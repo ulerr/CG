@@ -5,7 +5,7 @@ export function createEnemy(scene, position, enemies, dirX = 1) {
   const loader = new GLTFLoader();
 
   loader.load(
-    './assets/duck.glb',
+    './assets/drone.glb',
     function (gltf) {
       let obj = gltf.scene;
       obj.scale.set(6, 6, 6);

@@ -4,7 +4,7 @@ import * as THREE from "three";
 // Versão simplificada do enunciado (em T3 vira billboard, sempre virado ao player).
 export function createPlayerShot(scene, origin, direction, shots, speed = 260) {
   const geometry = new THREE.BoxGeometry(0.2, 0.2, 4); // alongado no eixo Z local
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff1a });
+  const material = new THREE.MeshBasicMaterial({ color: 0xff001a });
   const shot = new THREE.Mesh(geometry, material);
 
   const dir = direction.clone().normalize();
