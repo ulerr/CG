@@ -247,8 +247,8 @@ function intersecoesLERPeSLERP() {
     const alphaX = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absX, 0.0, 3.0) * 0.8 + 0.2);
     const alphaY = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absY, 0.0, 3.0) * 0.8 + 0.2);
 
-    alvo.position.x = THREE.MathUtils.lerp(alvo.position.x, pontoIntersecao.x, alvoLerpConfig.alpha);
-    alvo.position.y = THREE.MathUtils.lerp(alvo.position.y, pontoIntersecao.y, alvoLerpConfig.alpha);
+    alvo.position.x = alvo.position.x;
+    alvo.position.y = alvo.position.y;
 
     aviao.position.x = THREE.MathUtils.lerp(aviao.position.x, pontoIntersecao.x, alphaX);
     aviao.position.y = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y - 3, alphaY);
