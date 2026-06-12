@@ -244,17 +244,17 @@ function intersecoesLERPeSLERP() {
     const absX = Math.abs(dX);
     const absY = Math.abs(dY);
 
-    const alphaX = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absX, 0.0, 3.0) * 0.8 + 0.2);
-    const alphaY = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absY, 0.0, 3.0) * 0.8 + 0.2);
+    const alphaX = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absX, 0.0, 3.0) * 1.5 + 0.2);
+    const alphaY = aviaoLerpConfig.alpha * (THREE.MathUtils.smoothstep(absY, 0.0, 3.0) * 1.5 + 0.2);
 
-    alvo.position.x = alvo.position.x;
-    alvo.position.y = alvo.position.y;
+    alvo.position.x = pontoIntersecao.x;
+    alvo.position.y = pontoIntersecao.y;
 
     aviao.position.x = THREE.MathUtils.lerp(aviao.position.x, pontoIntersecao.x, alphaX);
     aviao.position.y = THREE.MathUtils.lerp(aviao.position.y, pontoIntersecao.y - 3, alphaY);
 
-    const smoothX = THREE.MathUtils.smoothstep(absX, 2, 12);
-    const smoothY = THREE.MathUtils.smoothstep(absY, 1, 6);
+    const smoothX = THREE.MathUtils.smoothstep(absX, 4, 24);
+    const smoothY = THREE.MathUtils.smoothstep(absY, 2, 9);
 
     const anguloRoll = THREE.MathUtils.clamp(dX * 0.35, -maxRoll, maxRoll) * smoothX;
     const anguloYaw = THREE.MathUtils.clamp(dX * 0.06, -maxYaw, maxYaw) * smoothX;
