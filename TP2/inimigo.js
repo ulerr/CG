@@ -8,7 +8,7 @@ export function createEnemy(scene, position, enemies, dirX = 1) {
     './assets/drone.glb',
     function (gltf) {
       let obj = gltf.scene;
-      obj.scale.set(6, 6, 6);
+      obj.scale.set(2, 2, 2);
       obj.position.copy(position);
       obj.userData.isEnemy = true;
       obj.userData.speed = 12;      // velocidade lateral (atravessar a tela)

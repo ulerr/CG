@@ -27,7 +27,7 @@ renderer.setClearColor(baseColor);
 let scene = new THREE.Scene();
 scene.fog = new THREE.Fog(baseColor, 1, 250);
 
-const posLuz = new THREE.Vector3(1, 0, 0);
+const posLuz = new THREE.Vector3(1, 1, 0);
 const corLuz = "rgb(255,255,255)";
 let luz = new THREE.DirectionalLight(corLuz, 5);
 luz.position.copy(posLuz);
@@ -312,7 +312,7 @@ function spawnEnemies(chunk, amount, zBase) {
     const x = fromLeft ? -45 : 45;
     const dirX = fromLeft ? 1 : -1;
 
-    const z = zBase - (20 + Math.random() * 160);  // distribuído dentro do chunk
+    const z = aviao.position.z - (120 + Math.random() * 200);  // distribuído dentro do chunk
     const y = 15 + Math.random() * 10;
 
     const position = new THREE.Vector3(x, y, z);
@@ -434,10 +434,10 @@ function render() {
     luz.position.set(aviao.position.x + 80, aviao.position.y + 100, aviao.position.z + 40);
     luz.target = aviao;
 
-    const alcanceVisivel = scene.fog.far;
+    const alcanceVisivel = scene.fog.far * 1.25;
 
     luz.shadow.camera.near = 1;
-    luz.shadow.camera.far = alcanceVisivel + 50;
+    luz.shadow.camera.far = alcanceVisivel + 5;
 
     luz.shadow.camera.left = -alcanceVisivel * 0.5;
     luz.shadow.camera.right = alcanceVisivel * 0.5;
