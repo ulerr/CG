@@ -5,7 +5,13 @@ import { createTree1, createTree2 } from "./arvore.js";
 import { createAirplane } from "./aviao.js";
 import { createTarget } from "./target.js";
 import KeyboardState from "../libs/util/KeyboardState.js";
-import { createTerrainChunk, getTerrainHeight } from "./terreno.js";
+import {
+  createTerrainChunk,
+  getTerrainHeight,
+  createAguaChunk,
+  atualizarAgua,
+  NIVEL_AGUA,
+} from "./terreno.js";
 import { createEnemy, createBullet } from "./inimigo.js";
 import { createPlayerShot } from "./tiroJogador.js";
 import {
@@ -208,6 +214,11 @@ function createChunk(zPosition) {
 
   chunk.add(terrain);
 
+  // plano de água do chunk (shader), nas regiões baixas do terreno
+  const agua = createAguaChunk();
+  agua.position.z = zPosition;
+  chunk.add(agua);
+
   let trees = (Math.random() * 150 + 150 + 1) | 0;
   spawnTrees(chunk, trees, zPosition);
 
@@ -334,6 +345,13 @@ function spawnTrees(chunk, amount, zBase) {
       x = (Math.random() - 0.5) * 200;
       z = zBase + (Math.random() - 0.5) * 400;
       const y = getTerrainHeight(x, z);
+
+      // não planta árvore submersa (abaixo do nível da água)
+      if (y < NIVEL_AGUA + 0.5) {
+        validPosition = false;
+        continue;
+      }
+
       // Verifica distância com árvores existentes
       for (let j = 0; j < trees.length; j++) {
 
@@ -421,6 +439,7 @@ function keyboardUpdate() {
 
 function render() {
   const rawDelta = clock.getDelta(); // delta real em segundos
+  atualizarAgua(clock.elapsedTime); // anima ondas e normal map da água
   const delta = rawDelta * fator;
   stats.update();
   keyboardUpdate();

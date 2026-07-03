@@ -94,39 +94,6 @@ class ImprovedNoise {
   }
 }
 
-// Função principal
-export function createTerrain() {
-  const size = 200;
-  const segments = 200;
-
-  const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
-  geometry.rotateX(-Math.PI / 2);
-
-  const noise = new ImprovedNoise();
-  const vertices = geometry.attributes.position;
-
-  for (let i = 0; i < vertices.count; i++) {
-    const x = vertices.getX(i);
-    const z = vertices.getZ(i);
-
-    const y = noise.noise(x * 0.05, z * 0.05, 0) * 10;
-    vertices.setY(i, y);
-  }
-
-  geometry.computeVertexNormals();
-
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x228B22,
-    wireframe: false
-  });
-
-  const terrain = new THREE.Mesh(geometry, material);
-  terrain.receiveShadow = true;
-  terrain.castShadow = true;
-
-  return terrain;
-}
-
 const noise = new ImprovedNoise();
 
 export function getTerrainHeight(x, z) {
@@ -137,6 +104,165 @@ export function getTerrainHeight(x, z) {
   );
 }
 
+//=====================================================================
+// TEXTURIZAÇÃO DO TERRENO VIA SHADERS (Procedural Material Blending)
+//=====================================================================
+// A ideia central: em vez de aplicar UMA textura no terreno, o
+// fragment shader recebe QUATRO texturas (areia, grama, rocha, neve)
+// e decide, PIXEL A PIXEL, quanto de cada uma usar com base em duas
+// características geométricas:
+//   1. ALTURA do ponto (y em coordenadas de mundo)
+//   2. INCLINAÇÃO da superfície (componente y da normal)
+// As transições usam smoothstep(), que gera o efeito de blending
+// (mistura suave) exigido no enunciado.
+//=====================================================================
+
+// Altura (y) do plano de água. Regiões do terreno abaixo desta cota
+// ficam submersas.
+export const NIVEL_AGUA = -3.5;
+
+// --- Carregamento das texturas -------------------------------------
+const texLoader = new THREE.TextureLoader();
+
+function loadRepeatTexture(url) {
+  const tex = texLoader.load(url);
+  // RepeatWrapping: a textura se repete (tile) — essencial porque as
+  // UVs usadas no shader são as coordenadas de mundo (x,z) escaladas,
+  // que crescem sem limite conforme o avião avança.
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const texAreia = loadRepeatTexture('./assets/textures/sand-512.jpg');
+const texGrama = loadRepeatTexture('./assets/textures/grass-512.jpg');
+const texRocha = loadRepeatTexture('./assets/textures/rock-512.jpg');
+const texNeve  = loadRepeatTexture('./assets/textures/snow-512.jpg');
+
+// Normal map da água (do repositório do three.js). Não é sRGB pois
+// guarda vetores, não cores.
+const texNormaisAgua = texLoader.load('./assets/textures/waternormals.jpg');
+texNormaisAgua.wrapS = texNormaisAgua.wrapT = THREE.RepeatWrapping;
+
+// --- Parâmetros de névoa (devem casar com o fog criado no main.js) --
+const FOG_COLOR = new THREE.Color("rgb(175, 200, 220)");
+const FOG_NEAR = 1;
+const FOG_FAR = 250;
+
+// Direção da luz do sol (mesma direção da DirectionalLight do main.js,
+// que fica em (1,1,0) apontando para a origem).
+const DIR_LUZ = new THREE.Vector3(1, 1, 0).normalize();
+
+// --- Vertex shader do terreno ---------------------------------------
+// Só repassa ao fragment shader as informações geométricas de que ele
+// precisa: posição em coordenadas de MUNDO (para altura e UVs),
+// normal em mundo (para inclinação e iluminação) e distância até a
+// câmera (para a névoa).
+const terrainVertexShader = /* glsl */`
+  varying vec3 vWorldPos;   // posição do vértice no mundo
+  varying vec3 vNormal;     // normal no espaço do mundo
+  varying float vDist;      // distância até a câmera (para o fog)
+
+  void main() {
+    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+    vWorldPos = worldPos.xyz;
+
+    // mat3(modelMatrix) funciona aqui porque o chunk não tem escala.
+    vNormal = normalize(mat3(modelMatrix) * normal);
+
+    vec4 mvPosition = viewMatrix * worldPos;
+    vDist = -mvPosition.z;
+
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+// --- Fragment shader do terreno --------------------------------------
+const terrainFragmentShader = /* glsl */`
+  uniform sampler2D tAreia;
+  uniform sampler2D tGrama;
+  uniform sampler2D tRocha;
+  uniform sampler2D tNeve;
+  uniform vec3 dirLuz;
+  uniform vec3 fogColor;
+  uniform float fogNear;
+  uniform float fogFar;
+  uniform float nivelAgua;
+
+  varying vec3 vWorldPos;
+  varying vec3 vNormal;
+  varying float vDist;
+
+  void main() {
+    // UVs derivadas da posição de MUNDO (x,z): garante continuidade
+    // perfeita das texturas entre chunks vizinhos, sem emendas.
+    // Cada material usa uma escala de repetição própria.
+    vec2 uvBase = vWorldPos.xz;
+    vec3 areia = texture2D(tAreia, uvBase * 0.08).rgb;
+    vec3 grama = texture2D(tGrama, uvBase * 0.06).rgb;
+    vec3 rocha = texture2D(tRocha, uvBase * 0.04).rgb;
+    vec3 neve  = texture2D(tNeve,  uvBase * 0.05).rgb;
+
+    float h = vWorldPos.y; // altura do fragmento
+
+    //----------------------------------------------------------------
+    // BLENDING POR ALTURA — cada smoothstep(a, b, h) devolve 0 antes
+    // de 'a', 1 depois de 'b' e uma transição suave entre os dois.
+    // É exatamente essa rampa que cria a mistura entre as texturas.
+    //----------------------------------------------------------------
+    float areiaParaGrama = smoothstep(nivelAgua + 0.5, nivelAgua + 3.0, h);
+    float gramaParaRocha = smoothstep(5.0, 9.0, h);
+    float rochaParaNeve  = smoothstep(9.5, 12.5, h);
+
+    vec3 cor = mix(areia, grama, areiaParaGrama);
+    cor = mix(cor, rocha, gramaParaRocha);
+    cor = mix(cor, neve,  rochaParaNeve);
+
+    //----------------------------------------------------------------
+    // BLENDING POR INCLINAÇÃO — normal.y == 1 em terreno plano e
+    // diminui conforme a encosta fica íngreme. Encostas íngremes
+    // recebem rocha independentemente da altura (grama e neve não
+    // "grudam" em paredões).
+    //----------------------------------------------------------------
+    float inclinacao = 1.0 - clamp(vNormal.y, 0.0, 1.0);
+    float pesoEncosta = smoothstep(0.30, 0.55, inclinacao);
+    cor = mix(cor, rocha, pesoEncosta);
+
+    //----------------------------------------------------------------
+    // ILUMINAÇÃO (Lambert): como ShaderMaterial não usa as luzes da
+    // cena automaticamente, calculamos o termo difuso manualmente com
+    // a mesma direção da DirectionalLight do main.js.
+    //----------------------------------------------------------------
+    float difusa = max(dot(normalize(vNormal), dirLuz), 0.0);
+    vec3 corIluminada = cor * (0.35 + 0.75 * difusa); // 0.35 = ambiente
+
+    //----------------------------------------------------------------
+    // NÉVOA: reproduz o THREE.Fog linear da cena para o terreno não
+    // "furar" o efeito de fog dos outros objetos.
+    //----------------------------------------------------------------
+    float fogFactor = smoothstep(fogNear, fogFar, vDist);
+    gl_FragColor = vec4(mix(corIluminada, fogColor, fogFactor), 1.0);
+  }
+`;
+
+// Material único compartilhado por todos os chunks (mais eficiente e
+// as UVs por posição de mundo dispensam ajustes por chunk).
+const terrainMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    tAreia:   { value: texAreia },
+    tGrama:   { value: texGrama },
+    tRocha:   { value: texRocha },
+    tNeve:    { value: texNeve },
+    dirLuz:   { value: DIR_LUZ },
+    fogColor: { value: FOG_COLOR },
+    fogNear:  { value: FOG_NEAR },
+    fogFar:   { value: FOG_FAR },
+    nivelAgua:{ value: NIVEL_AGUA },
+  },
+  vertexShader: terrainVertexShader,
+  fragmentShader: terrainFragmentShader,
+});
+
 export function createTerrainChunk(zOffset = 0) {
   const size = 400;
   const segments = 100;
@@ -144,12 +270,11 @@ export function createTerrainChunk(zOffset = 0) {
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
   geometry.rotateX(-Math.PI / 2);
 
-  const noise = new ImprovedNoise();
   const vertices = geometry.attributes.position;
 
   for (let i = 0; i < vertices.count; i++) {
     const x = vertices.getX(i);
-    const z = vertices.getZ(i) + zOffset; 
+    const z = vertices.getZ(i) + zOffset;
 
     const y = getTerrainHeight(x, z);
 
@@ -158,12 +283,126 @@ export function createTerrainChunk(zOffset = 0) {
 
   geometry.computeVertexNormals();
 
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x3a7a3a,
-  });
-
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.receiveShadow = true;
+  const mesh = new THREE.Mesh(geometry, terrainMaterial);
+  // Obs.: ShaderMaterial não participa do shadow mapping padrão do
+  // three.js; o sombreamento do terreno vem do Lambert no shader.
 
   return mesh;
+}
+
+//=====================================================================
+// ÁGUA COM SHADERS
+//=====================================================================
+// Um plano na cota NIVEL_AGUA cobre as regiões baixas do terreno.
+// O efeito de água combina:
+//   - ondulação geométrica no vertex shader (senos animados no tempo)
+//   - normal map rolando em duas direções/escalas (fragment shader)
+//   - fresnel: água mais clara/reflexiva em ângulos rasos de visão
+//   - reflexo especular do sol
+//=====================================================================
+
+const aguaVertexShader = /* glsl */`
+  uniform float tempo;
+
+  varying vec3 vWorldPos;
+  varying float vDist;
+
+  void main() {
+    vec3 pos = position;
+
+    // Ondas: soma de dois senos com frequências/fases diferentes.
+    // Deslocamos o vértice em y (o plano já está rotacionado).
+    vec4 wp = modelMatrix * vec4(pos, 1.0);
+    pos.y += sin(wp.x * 0.35 + tempo * 1.3) * 0.12
+           + cos(wp.z * 0.28 + tempo * 0.9) * 0.12;
+
+    vec4 worldPos = modelMatrix * vec4(pos, 1.0);
+    vWorldPos = worldPos.xyz;
+
+    vec4 mvPosition = viewMatrix * worldPos;
+    vDist = -mvPosition.z;
+
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const aguaFragmentShader = /* glsl */`
+  uniform float tempo;
+  uniform sampler2D tNormais;
+  uniform vec3 dirLuz;
+  uniform vec3 fogColor;
+  uniform float fogNear;
+  uniform float fogFar;
+
+  varying vec3 vWorldPos;
+  varying float vDist;
+
+  void main() {
+    // Duas amostras do normal map, em escalas e velocidades
+    // diferentes, somadas: quebra a repetição visível e dá a
+    // impressão de ondulação contínua.
+    vec2 uv1 = vWorldPos.xz * 0.040 + vec2(tempo * 0.020, tempo * 0.014);
+    vec2 uv2 = vWorldPos.xz * 0.085 - vec2(tempo * 0.028, tempo * 0.020);
+    vec3 n1 = texture2D(tNormais, uv1).rgb * 2.0 - 1.0;
+    vec3 n2 = texture2D(tNormais, uv2).rgb * 2.0 - 1.0;
+
+    // O normal map guarda o vetor em "tangent space" com z para fora;
+    // como o plano é horizontal, trocamos z<->y para o espaço do mundo.
+    vec3 normal = normalize(vec3(n1.x + n2.x, 4.0, n1.y + n2.y));
+
+    // Fresnel: olhando de raspão (ângulo raso) a água reflete mais
+    // (fica mais clara); olhando de cima vemos a cor profunda.
+    vec3 dirVisao = normalize(cameraPosition - vWorldPos);
+    float fresnel = pow(1.0 - max(dot(dirVisao, normal), 0.0), 2.0);
+
+    vec3 corProfunda = vec3(0.03, 0.18, 0.30);
+    vec3 corRasa     = vec3(0.16, 0.50, 0.60);
+    vec3 cor = mix(corProfunda, corRasa, clamp(fresnel * 1.2, 0.0, 1.0));
+
+    // Brilho especular do sol (Phong): reflexo pontual da luz.
+    vec3 reflexo = reflect(-dirLuz, normal);
+    float especular = pow(max(dot(reflexo, dirVisao), 0.0), 80.0);
+    cor += vec3(1.0) * especular * 0.7;
+
+    // Névoa igual à do terreno.
+    float fogFactor = smoothstep(fogNear, fogFar, vDist);
+    cor = mix(cor, fogColor, fogFactor);
+
+    gl_FragColor = vec4(cor, 0.88); // levemente transparente
+  }
+`;
+
+const aguaMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    tempo:    { value: 0 },
+    tNormais: { value: texNormaisAgua },
+    dirLuz:   { value: DIR_LUZ },
+    fogColor: { value: FOG_COLOR },
+    fogNear:  { value: FOG_NEAR },
+    fogFar:   { value: FOG_FAR },
+  },
+  vertexShader: aguaVertexShader,
+  fragmentShader: aguaFragmentShader,
+  transparent: true,
+});
+
+// Cria o plano de água de um chunk (mesmo tamanho do terreno).
+export function createAguaChunk() {
+  const size = 400;
+  const segments = 60; // subdividido para as ondas do vertex shader
+
+  const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
+  geometry.rotateX(-Math.PI / 2);
+
+  const mesh = new THREE.Mesh(geometry, aguaMaterial);
+  mesh.position.y = NIVEL_AGUA;
+
+  return mesh;
+}
+
+// Chamada a cada frame pelo main.js para animar as ondas e o
+// deslizamento do normal map (uniform 'tempo' é compartilhado por
+// todos os chunks de água, pois o material é único).
+export function atualizarAgua(tempoDecorrido) {
+  aguaMaterial.uniforms.tempo.value = tempoDecorrido;
 }
