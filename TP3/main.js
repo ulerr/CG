@@ -219,7 +219,7 @@ function createChunk(zPosition) {
   agua.position.z = zPosition;
   chunk.add(agua);
 
-  let trees = (Math.random() * 150 + 150 + 1) | 0;
+  let trees = ((Math.random() * 150 + 150 + 1) | 0)/3;
   spawnTrees(chunk, trees, zPosition);
 
   return chunk;
