@@ -107,18 +107,7 @@ export function getTerrainHeight(x, z) {
 //=====================================================================
 // TEXTURIZAÇÃO DO TERRENO VIA SHADERS (Procedural Material Blending)
 //=====================================================================
-// A ideia central: em vez de aplicar UMA textura no terreno, o
-// fragment shader recebe QUATRO texturas (areia, grama, rocha, neve)
-// e decide, PIXEL A PIXEL, quanto de cada uma usar com base em duas
-// características geométricas:
-//   1. ALTURA do ponto (y em coordenadas de mundo)
-//   2. INCLINAÇÃO da superfície (componente y da normal)
-// As transições usam smoothstep(), que gera o efeito de blending
-// (mistura suave) exigido no enunciado.
-//=====================================================================
 
-// Altura (y) do plano de água. Regiões do terreno abaixo desta cota
-// ficam submersas.
 export const NIVEL_AGUA = -3.5;
 
 // --- Carregamento das texturas -------------------------------------
@@ -126,9 +115,6 @@ const texLoader = new THREE.TextureLoader();
 
 function loadRepeatTexture(url) {
   const tex = texLoader.load(url);
-  // RepeatWrapping: a textura se repete (tile) — essencial porque as
-  // UVs usadas no shader são as coordenadas de mundo (x,z) escaladas,
-  // que crescem sem limite conforme o avião avança.
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -139,18 +125,14 @@ const texGrama = loadRepeatTexture('./assets/textures/grass-512.jpg');
 const texRocha = loadRepeatTexture('./assets/textures/rock-512.jpg');
 const texNeve  = loadRepeatTexture('./assets/textures/snow-512.jpg');
 
-// Normal map da água (do repositório do three.js). Não é sRGB pois
-// guarda vetores, não cores.
+
 const texNormaisAgua = texLoader.load('./assets/textures/waternormals.jpg');
 texNormaisAgua.wrapS = texNormaisAgua.wrapT = THREE.RepeatWrapping;
 
-// --- Parâmetros de névoa (devem casar com o fog criado no main.js) --
 const FOG_COLOR = new THREE.Color("rgb(175, 200, 220)");
 const FOG_NEAR = 1;
 const FOG_FAR = 250;
 
-// Direção da luz do sol (mesma direção da DirectionalLight do main.js,
-// que fica em (1,1,0) apontando para a origem).
 const DIR_LUZ = new THREE.Vector3(1, 1, 0).normalize();
 
 // --- Vertex shader do terreno ---------------------------------------
@@ -292,13 +274,6 @@ export function createTerrainChunk(zOffset = 0) {
 
 //=====================================================================
 // ÁGUA COM SHADERS
-//=====================================================================
-// Um plano na cota NIVEL_AGUA cobre as regiões baixas do terreno.
-// O efeito de água combina:
-//   - ondulação geométrica no vertex shader (senos animados no tempo)
-//   - normal map rolando em duas direções/escalas (fragment shader)
-//   - fresnel: água mais clara/reflexiva em ângulos rasos de visão
-//   - reflexo especular do sol
 //=====================================================================
 
 const aguaVertexShader = /* glsl */`
