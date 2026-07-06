@@ -26,7 +26,7 @@ export function initSons(camera) {
 
   // Música de fundo
   audioLoader.load(
-    "./assets/sounds/musica.mp3",
+    "./assets/sounds/ambiente.mp3",
     (buffer) => {
       musica = new THREE.Audio(listener);
       musica.setBuffer(buffer);
@@ -38,18 +38,37 @@ export function initSons(camera) {
       if (jogoIniciado && musicaLigada) musica.play();
     },
     undefined,
-    () => console.warn("musica.mp3 não encontrada em ./assets/sounds/"),
+    () => console.warn("ambiente.mp3 não encontrada em ./assets/sounds/"),
   );
 
   // Efeitos sonoros
-  for (const nome of Object.keys(buffers)) {
-    audioLoader.load(
-      `./assets/sounds/${nome}.mp3`,
-      (buffer) => (buffers[nome] = buffer),
+  audioLoader.load(
+      `./assets/sounds/abatido.mp3`,
+      (buffer) => (buffers[abatido] = buffer),
       undefined,
-      () => console.warn(`${nome}.mp3 não encontrado; usando som sintetizado`),
+      () => console.warn(`abatido.mp3 não encontrado; usando som sintetizado`),
     );
-  }
+
+  audioLoader.load(
+      `./assets/sounds/atingido.wav`,
+      (buffer) => (buffers[atingido] = buffer),
+      undefined,
+      () => console.warn(`atingido.wav não encontrado; usando som sintetizado`),
+    );
+
+  audioLoader.load(
+      `./assets/sounds/tiro.mp3`,
+      (buffer) => (buffers[tiro] = buffer),
+      undefined,
+      () => console.warn(`tiro.mp3 não encontrado; usando som sintetizado`),
+    );
+
+  audioLoader.load(
+      `./assets/sounds/healthpack.wav`,
+      (buffer) => (buffers[healthpack] = buffer),
+      undefined,
+      () => console.warn(`healthpack.wav não encontrado; usando som sintetizado`),
+    );
 }
 
 // Chamado quando o botão START é pressionado
