@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-
+import { loadingManager } from './gerenciadorAssets.js';
 
 // Perlin Noise simples
 class ImprovedNoise {

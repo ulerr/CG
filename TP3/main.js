@@ -11,14 +11,6 @@ import { createTree1, createTree2 } from "./arvore.js";
 import { createAirplane } from "./aviao.js";
 import { createTarget } from "./target.js";
 
-import {
-  initRenderer,
-  SecondaryBox,
-  initDefaultBasicLight,
-  onWindowResize,
-  InfoBox,
-  createGroundPlaneWired,
-} from "../libs/util/util.js";
 import { KeyframeTrack } from "../build/three.core.js";
 
 import {
