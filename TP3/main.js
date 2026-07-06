@@ -422,7 +422,7 @@ function alternarInvencibilidade() {
 function aplicarDanoAviao() {
   if (invencivel) return; // modo invencível: não recebe dano nem conta tiro
 
-  registrarTiroRecebido();
+  registrarTiroRecebido(1);
   energia -= DANO_POR_TIRO;
   setEnergia(energia);
   somAviaoAtingido();
@@ -440,6 +440,7 @@ function fimDeJogo() {
 
 function coletarHealthPack() {
   energia = Math.min(100, energia + CURA_HEALTH_PACK);
+  registrarTiroRecebido(-4);
   setEnergia(energia);
   somHealthPack();
 }

@@ -58,8 +58,8 @@ export function setEnergia(pct) {
   else barraFill.style.background = "linear-gradient(90deg,#ff7f7f,#b02f2f)";
 }
 
-export function registrarTiroRecebido() {
-  tirosRecebidos++;
+export function registrarTiroRecebido(qtd) {
+  tirosRecebidos+=qtd;
   textoTiros.textContent = `Tiros recebidos: ${tirosRecebidos} / 20`;
 }
 

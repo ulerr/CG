@@ -43,10 +43,10 @@ export function initSons(camera) {
 
   // Efeitos sonoros
   audioLoader.load(
-      `./assets/sounds/abatido.mp3`,
+      `./assets/sounds/abatido.wav`,
       (buffer) => (buffers[abatido] = buffer),
       undefined,
-      () => console.warn(`abatido.mp3 não encontrado; usando som sintetizado`),
+      () => console.warn(`abatido.wav não encontrado; usando som sintetizado`),
     );
 
   audioLoader.load(
