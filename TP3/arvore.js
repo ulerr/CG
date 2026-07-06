@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
-let trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 3, 32);
+let trunkGeometry = new THREE.CylinderGeometry(0.5, 0.5, 3, 8);
 let trunkMaterial = new THREE.MeshPhongMaterial({ color: "sienna" });
 let foliageMaterial = new THREE.MeshPhongMaterial({ color: "forestgreen" });
-let foliageGeometry1 = new THREE.ConeGeometry(2, 4, 32);
-let foliageGeometry2 = new THREE.ConeGeometry(1.5, 3, 32);
-let foliageGeometry3 = new THREE.ConeGeometry(1, 2, 32);
+let foliageGeometry1 = new THREE.ConeGeometry(2, 4, 8);
+let foliageGeometry2 = new THREE.ConeGeometry(1.5, 3, 8);
+let foliageGeometry3 = new THREE.ConeGeometry(1, 2, 8);
 let foliageGeometry4 = new THREE.SphereGeometry(2, 6, 6);  
    
 export function createTree1() {

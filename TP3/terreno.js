@@ -111,7 +111,7 @@ export function getTerrainHeight(x, z) {
 export const NIVEL_AGUA = -3.5;
 
 // --- Carregamento das texturas -------------------------------------
-const texLoader = new THREE.TextureLoader();
+const texLoader = new THREE.TextureLoader(loadingManager);
 
 function loadRepeatTexture(url) {
   const tex = texLoader.load(url);
@@ -380,4 +380,14 @@ export function createAguaChunk() {
 // todos os chunks de água, pois o material é único).
 export function atualizarAgua(tempoDecorrido) {
   aguaMaterial.uniforms.tempo.value = tempoDecorrido;
+}
+
+// Mantém o fog dos shaders (terreno e água) sincronizado com o
+// THREE.Fog da cena quando o usuário altera a distância na GUI.
+// Sem isto, mexer no slider "Fog Distance" muda a névoa dos demais
+// objetos mas não a do terreno/água, que têm o fog replicado à mão
+// no fragment shader.
+export function setFogFar(valor) {
+  terrainMaterial.uniforms.fogFar.value = valor;
+  aguaMaterial.uniforms.fogFar.value = valor;
 }
